@@ -6,44 +6,28 @@
 /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/05 17:14:40 by roglopes          #+#    #+#             */
-/*   Updated: 2024/06/29 16:58:33 by roglopes         ###   ########.fr       */
+/*   Updated: 2024/07/13 16:17:51 by roglopes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
 
-int	execute_opr(t_tree *opr)
-{
-	if (opr->tree_type == LESS)
-		return (init_redirect_input(opr));
-	else if (opr->tree_type == GREAT)
-		return (init_redirect_output(opr));
-	else if (opr->tree_type == DGREAT)
-		return (init_redirect_append(opr));
-	else if (opr->tree_type == DLESS)
-		return (init_heredoc(opr));
-	else if (opr->tree_type == PIPE)
-		return (init_pipe(opr));
-	else
-		return (EMPTY_OR_OT);
-}
-
-void	ongoing_tree(t_tree *node, t_tree **tree_list, t_token **token_list)
+void	ongoing_tree(t_tree *node, t_tree **tree_lists, t_token **token_list)
 {
 	if (node == NULL)
 		return ;
-	ongoing_tree(node->left, tree_list, token_list);
+	ongoing_tree(node->left, tree_lists, token_list);
 	if (node->tree_type >= 4 && node->tree_type <= 8)
 	{
 		printf("\nINIT\n\n");
-		if (execute_opr(node) == KO)
+		if (execute_opr(node) == FT_ERROR)
 		{
-			free_list(tree_list, token_list);
+			free_list(tree_lists, token_list);
 			exit(EXIT_FAILURE);
 		}
 		printf("\nEND\n\n");
 	}
-	ongoing_tree(node->right, tree_list, token_list);
+	ongoing_tree(node->right, tree_lists, token_list);
 }
 
 void	for_each_cmd(t_tree *node, t_token **token_list)
@@ -59,7 +43,7 @@ void	for_each_cmd(t_tree *node, t_token **token_list)
 	}
 	else if (pid == 0)
 	{
-		if (execute_command(node->content) == FALSE)
+		if (execute_command(node->content) == FT_ERROR)
 		{
 			free_list(&node, token_list);
 			exit(EXIT_SUCCESS);
@@ -75,38 +59,41 @@ void	for_each_cmd(t_tree *node, t_token **token_list)
 	}
 }
 
-void	initialize_execution(t_tree **tree_list, t_token **token_list)
+void	initialize_execution(t_tree **tree_lists, t_token **token_list)
 {
 	t_tree	*cmd;
 
-	if (tree_list == NULL || *tree_list == NULL)
+	if (tree_lists == NULL || *tree_lists == NULL)
 		return ;
-	cmd = *tree_list;
+	cmd = *tree_lists;
 	if (cmd->right == NULL && cmd->left == NULL)
 		for_each_cmd(cmd, token_list);
 	else
-		ongoing_tree(cmd, tree_list, token_list);
+		ongoing_tree(cmd, tree_lists, token_list);
 }
 
-void	handle_internal_command(t_token *tokens)
+void handle_internal_command(char **args, t_data *data, t_venv **envp)
 {
-	if (ft_strcmp(tokens->content, "pwd") == 0)
-		ft_pwd(0, tokens);
-	else if (ft_strcmp(tokens->content, "clear") == 0)
-		clear_screen();
-	else if (ft_strcmp(tokens->content, "exit") == 0)
-	{
-		ft_free_tokens(tokens);
-		exit(EXIT_SUCCESS);
-	}
-	else if (ft_strcmp(tokens->content, "cd") == 0)
-		ft_cd(tokens);
-	else if (ft_strcmp(tokens->content, "export") == 0)
-		export_variable(tokens);
-	else if (ft_strcmp(tokens->content, "unset") == 0)
-		ft_unset(tokens);
-	else if (ft_strcmp(tokens->content, "env") == 0)
-		print_environment();
-	else if (ft_strcmp(tokens->content, "echo") == 0)
-		ft_echo(tokens);
+    t_token *current;
+
+    current = data->token_list;
+    if (ft_strcmp(current->content, "pwd") == 0)
+        ft_pwd(0, current);
+    else if (ft_strcmp(current->content, "clear") == 0)
+        clear_screen();
+    else if (ft_strcmp(current->content, "exit") == 0)
+    {
+        ft_free_tokens(current);
+        exit(EXIT_SUCCESS);
+    }
+    else if (ft_strcmp(current->content, "cd") == 0)
+        ft_cd(current);
+    else if (ft_strcmp(current->content, "export") == 0)
+        export_variable(current);
+    else if (ft_strcmp(current->content, "unset") == 0)
+        ft_unset(current);
+    else if (ft_strcmp(current->content, "env") == 0)
+        print_environment();
+    else if (ft_strcmp(current->content, "echo") == 0)
+        ft_echo(current);
 }

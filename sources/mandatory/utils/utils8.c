@@ -1,16 +1,3 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   variable_expansion2.c                              :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/06/15 15:43:41 by roglopes          #+#    #+#             */
-/*   Updated: 2024/06/16 13:24:11 by roglopes         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
-#include "../../../includes/mandatory/mini_shell.h"
 #include <readline/readline.h>
 #include <stdio.h>
 #include <unistd.h>

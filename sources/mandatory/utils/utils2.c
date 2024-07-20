@@ -6,7 +6,7 @@
 /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/13 19:41:51 by lluiz-de          #+#    #+#             */
-/*   Updated: 2024/06/15 14:24:01 by roglopes         ###   ########.fr       */
+/*   Updated: 2024/07/13 15:24:36 by roglopes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,7 +54,7 @@ size_t	ft_strspn(const char *s, const char *accept)
 	return (i);
 }
 
-t_tree	*tree_new(char *content, tokens token_type)
+t_tree	*tree_new(char *content, t_tokens token_type)
 {
 	t_tree	*node;
 
@@ -62,8 +62,10 @@ t_tree	*tree_new(char *content, tokens token_type)
 	if (node == NULL)
 		return (NULL);
 	node->content = content;
-	node->tree_type = initialize_checker(content, token_type); //Tentando corrigir tokens
+	node->tree_type = type_check(token_type);
 	node->left = NULL;
 	node->right = NULL;
+	node->left_token = NULL;
+	node->right_token = NULL;
 	return (node);
 }

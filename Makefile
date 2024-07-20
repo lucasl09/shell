@@ -6,78 +6,103 @@
 #    By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2024/03/31 16:34:27 by roglopes          #+#    #+#              #
-#    Updated: 2024/06/29 15:41:18 by roglopes         ###   ########.fr        #
+#    Updated: 2024/07/13 18:22:56 by roglopes         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
-NAME                = minishell
+NAME				= minishell
 
-SOURCES_DIR         = sources/
-OBJECTS_DIR         = objects/
+SOURCES_DIR			= sources/
+OBJECTS_DIR			= objects/
 
-HEADERS             = -I ./includes/mandatory/ -I ./libft/include/
+HEADERS				= -I ./includes/mandatory/ -I ./libft/include/
 
-MAIN_DIR            = $(SOURCES_DIR)mandatory/main/
-PROMPT_DIR          = $(SOURCES_DIR)mandatory/prompt/
-TOKEN_DIR           = $(SOURCES_DIR)mandatory/tokenizer/
-EXPANSION_DIR       = $(SOURCES_DIR)mandatory/expansion/
-COMMAND_DIR         = $(SOURCES_DIR)mandatory/command/
-BUILTINS_DIR        = $(SOURCES_DIR)mandatory/builtins/
-UTILS_DIR           = $(SOURCES_DIR)mandatory/utils/
-FREE_DIR            = $(SOURCES_DIR)mandatory/free/
-INIT_DIR            = $(SOURCES_DIR)mandatory/initialize/
+MAIN_DIR			= $(SOURCES_DIR)mandatory/main/
+PROMPT_DIR			= $(SOURCES_DIR)mandatory/prompt/
+INITIALIZE_DIR		= $(SOURCES_DIR)mandatory/initialize/
+TOKEN_DIR			= $(SOURCES_DIR)mandatory/tokenizer/
+EXPANSION_DIR		= $(SOURCES_DIR)mandatory/expansion/
+COMMAND_DIR			= $(SOURCES_DIR)mandatory/command/
+BUILTINS_DIR		= $(SOURCES_DIR)mandatory/builtins/
+UTILS_DIR			= $(SOURCES_DIR)mandatory/utils/
+FREE_DIR			= $(SOURCES_DIR)mandatory/free/
+ERROR_DIR			= $(SOURCES_DIR)mandatory/error/
+ENV_DIR				= $(SOURCES_DIR)mandatory/getenv/
 
-LIBFT               = ./libft/libft.a
+LIBFT				= ./libft/libft.a
 
-CFLAGS              = -Wextra -Wall -Werror -g3
-CC                  = cc
+CFLAGS				= -Wextra -Wall -Werror -g3
+CC					= cc
 
-VALGRIND_LOG        = valgrind.log
+VALGRIND_LOG		= valgrind.log
 
-MAIN_SOURCES        = $(MAIN_DIR)main.c
+MAIN_SOURCES		= $(MAIN_DIR)main.c
 
-PROMPT_SOURCES      = $(PROMPT_DIR)prompt.c                \
-                    $(PROMPT_DIR)signal.c
+ERROR_SOURCES		= $(ERROR_DIR)error1.c                
 
-TOKEN_SOURCES       = $(TOKEN_DIR)tokenizer.c              \
-                    $(TOKEN_DIR)create_token.c
+PROMPT_SOURCES		= $(PROMPT_DIR)prompt.c                \
+					$(PROMPT_DIR)signal.c
 
-EXPANSION_SOURCES   = $(EXPANSION_DIR)variable_expansion.c \
-                    $(EXPANSION_DIR)variable_expansion2.c
+ENV_SOURCES		= $(ENV_DIR)env_utils.c                \
+					$(ENV_DIR)getenv.c
 
-COMMAND_SOURCES     = $(COMMAND_DIR)execute_command.c      \
-                    $(COMMAND_DIR)execute_command2.c
+INITIALIZE_SOURCES	= $(INITIALIZE_DIR)init_check.c \
+					$(INITIALIZE_DIR)init_command.c \
+					$(INITIALIZE_DIR)init_heredoc.c \
+					$(INITIALIZE_DIR)init_redirect.c \
+					$(INITIALIZE_DIR)init_pipe.c \
+					$(INITIALIZE_DIR)init_prompt.c \
 
-BUILTINS_SOURCES    = $(BUILTINS_DIR)builtins.c            \
-                    $(BUILTINS_DIR)builtins2.c
+TOKEN_SOURCES		= $(TOKEN_DIR)tokenizer.c              \
+					$(TOKEN_DIR)get_envtoken.c             \
+					$(TOKEN_DIR)justify_type_tokens.c      \
+					$(TOKEN_DIR)manage_tokens.c            \
+					$(TOKEN_DIR)org_tokens.c               \
+					$(TOKEN_DIR)create_token.c             \
 
-UTILS_SOURCES       = $(UTILS_DIR)utils.c                  \
-                    $(UTILS_DIR)utils2.c                   \
-                    $(UTILS_DIR)utils3.c
+EXPANSION_SOURCES	= $(EXPANSION_DIR)variable_expansion.c \
+					$(EXPANSION_DIR)variable_expansion2.c
 
-FREE_SOURCES        = $(FREE_DIR)free_type.c
+COMMAND_SOURCES		= $(COMMAND_DIR)execute_command.c      \
+					$(COMMAND_DIR)execute_command2.c       \
+					$(COMMAND_DIR)execute_command3.c       \
+					$(COMMAND_DIR)execute_command4.c       \
+					$(COMMAND_DIR)execute_command5.c       \
 
-INITIALIZE_SOURCES  = $(INIT_DIR)init_check.c              \
-                    $(INIT_DIR)init_hp.c                  \
-                    $(INIT_DIR)init_redirect.c            \
-                    $(INIT_DIR)init_tree.c
+BUILTINS_SOURCES	= $(BUILTINS_DIR)builtins.c            \
+					$(BUILTINS_DIR)builtins2.c             \
 
-SOURCES             = $(MAIN_SOURCES) $(UTILS_SOURCES)     \
-                    $(TOKEN_SOURCES) $(FREE_SOURCES)       \
-                    $(PROMPT_SOURCES) $(COMMAND_SOURCES)   \
-                    $(INITIALIZE_SOURCES) $(EXPANSION_SOURCES) \
-                    $(BUILTINS_SOURCES)
+UTILS_SOURCES		= $(UTILS_DIR)utils1.c                  \
+					$(UTILS_DIR)utils2.c                   \
+					$(UTILS_DIR)utils3.c				   \
+					$(UTILS_DIR)utils4.c                   \
+					$(UTILS_DIR)utils5.c                   \
+					$(UTILS_DIR)utils6.c                   \
+					$(UTILS_DIR)utils7.c                   \
+					$(UTILS_DIR)utils8.c                   \
+					$(UTILS_DIR)utils9.c                   \
+					$(UTILS_DIR)utils10.c                   \
+					$(UTILS_DIR)utils11.c                   \
 
-OBJS                = $(patsubst $(SOURCES_DIR)%.c,$(OBJECTS_DIR)%.o, $(SOURCES))
+FREE_SOURCES		= $(FREE_DIR)free_type.c
 
-COUNT               := 0
-RED                 = \033[0;31m
-GREEN               = \033[0;32m
-MAGENTA             = \033[0;35m
-RESET               = \033[0m
-CYAN                = \033[36;1;3;208m
-YELLOW              = \033[0;33m
-COLOR_LIMITER       = "\033[0m"
+SOURCES				= $(MAIN_SOURCES) $(PROMPT_SOURCES) \
+					$(FREE_SOURCES) $(INITIALIZE_SOURCES) \
+					$(TOKEN_SOURCES) $(UTILS_SOURCES) \
+					$(BUILTINS_SOURCES) $(COMMAND_SOURCES) \
+					$(ENV_SOURCES) $(ERROR_SOURCES_SOURCES) \
+					$(EXPANSION_SOURCES)
+
+OBJS				= $(patsubst $(SOURCES_DIR)%.c,$(OBJECTS_DIR)%.o, $(SOURCES))
+
+COUNT				:= 0
+RED					= \033[0;31m
+GREEN				= \033[0;32m
+MAGENTA				= \033[0;35m
+RESET				= \033[0m
+CYAN				= \033[36;1;3;208m
+YELLOW				= \033[0;33m
+COLOR_LIMITER		= "\033[0m"
 
 all: create_objects_dir libft $(OBJECTS_DIR) $(NAME)
 
@@ -85,9 +110,9 @@ $(OBJECTS_DIR)%.o: $(SOURCES_DIR)%.c
 	@mkdir -p $(@D)
 	@$(eval COUNT=$(shell expr $(COUNT) + 1))
 	@$(CC) $(CFLAGS) -o $@ -c $< $(HEADERS)
-	@printf "$(GREEN)Compiling Mini Shell %d%%\r$(RESET)" $$(echo $$(($(COUNT) * 100 / $(words $(SOURCES)))))
+	@printf "$(GREEN)Compiling Mini Shell %d%%\r$(RESET)" $$(echo $$(($(COUNT) * 100 / $(words $(SOURCES_DIR)))))
 
-$(NAME): $(OBJS)
+$(NAME): $(OBJS) 
 	@$(CC) $(CFLAGS) $(OBJS) $(HEADERS) $(LIBFT) -o $(NAME) -lreadline
 
 create_objects_dir:

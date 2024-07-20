@@ -6,95 +6,132 @@
 /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/05 16:48:42 by roglopes          #+#    #+#             */
-/*   Updated: 2024/06/16 14:32:08 by roglopes         ###   ########.fr       */
+/*   Updated: 2024/07/14 16:10:08 by roglopes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
+#include <readline/readline.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <signal.h>
+#include <fcntl.h>
 
-void	print_environment(void)
+static char	**initialize_varg(t_venv **envp)
 {
-	extern char	**environ;
-	char		**env;
+	t_venv	*tmp;
+	char		**environ_var;
+	int			index;
+	int			size_envp;
+	char		*line;
 
-	env = environ;
-	while (*env != NULL)
+	size_envp = env_size(envp);
+	environ_var = ft_calloc(sizeof(char *), size_envp + 1);
+	tmp = *envp;
+	index = 0;
+	line = NULL;
+	while (tmp && tmp->next && index < size_envp)
 	{
-		ft_printf("%s\n", *env);
-		env++;
+		line = ft_strjoin(tmp->key, "=");
+		environ_var[index] = ft_strjoin(line, tmp->value);
+		free(line);
+		tmp = tmp->next;
+		index++;
 	}
+	return (environ_var);
 }
 
-char	**get_args(char *content)
+static char	*build_path(char **path_args, int *index, char **has_arg)
 {
-	char	**quote;
-	char	**has_arg;
-
-	quote = NULL;
-	has_arg = NULL;
-	if (content[0] == '\'')
-		quote = ft_split(content, '\'');
-	else if (content[0] == '\"')
-		quote = ft_split(content, '\"');
-	if (quote != NULL)
-	{
-		has_arg = ft_split(quote[0], ' ');
-		free(quote);
-	}
-	else
-		has_arg = ft_split(content, ' ');
-
-	return (has_arg);
-}
-
-int	execute_command(char *content)
-{
-	char	**has_arg;
-	char	**args;
+	char	*partial_path;
 	char	*path;
-	int		i;
 
-	has_arg = get_args(content);
-	path = ft_strdup("/bin/");
-	if (path == NULL)
+	partial_path = ft_strjoin(path_args[(*index)++], "/");
+	path = ft_strjoin(partial_path, has_arg[0]);
+	free(partial_path);
+	return (path);
+}
+
+static int	repath(char **has_arg, char **path_args, char **args, int *index)
+{
+	char	*path;
+	int		status;
+
+	if (*index == -1)
+		path = ft_strdup(has_arg[++(*index)]);
+	else
+		path = build_path(path_args, index, has_arg);
+	status = access(path, F_OK | X_OK);
+	if (status == 0)
 	{
-		perror("ft_strdup");
-		exit(EXIT_FAILURE);
+		status = execve(path, has_arg, args);
+		if (status == -1)
+			status = FT_ERROR;
 	}
-	i = 0;
-	while (has_arg[i])
-		i++;
-	args = (char **)malloc((i + 2) * sizeof(char *));
-	if (args == NULL)
+	else if (status != 0 && (has_arg[0][0] == '.' || has_arg[0][0] == '/'))
 	{
-		perror("malloc");
-		free(path);
-		exit(EXIT_FAILURE);
+		if (access(path, F_OK) != 0)
+			status = 127;
+		else if (access(path, F_OK) == 0 && access(path, X_OK) != 0)
+			status = 126;
 	}
-	i = 0;
-	args[0] = ft_strjoin(path, has_arg[0]);
-	while (has_arg[i])
-	{
-		args[i + 1] = has_arg[i];
-		i++;
-	}
-	args[i + 1] = NULL;
-	if (execve(args[0], &args[1], __environ) == -1)
-	{
-		perror("execve");
-		i = 0;
-		while (args[i])
-			free(args[i++]);
-		free(args);
-		free(path);
-		free(has_arg);
-		return (ERROR);
-	}
-	i = 0;
-	while (args[i])
-		free(args[i++]);
-	free(args);
-	free(has_arg);
 	free(path);
-	return (TRUE);
+	return (status);
+}
+
+static void	start_execution(char **has_arg, char **path_args, int *status,
+		t_venv **envp)
+{
+	char	*tmp;
+	char	*final;
+	int		index;
+	char	**args;
+
+	index = -1;
+	args = initialize_varg(envp);
+	while (index == -1 || path_args[index])
+	{
+		*status = repath(has_arg, path_args, args, &index);
+		if (*status == FT_ERROR || *status == 127)
+			break ;
+		else if (*status == 126)
+		{
+			tmp = ft_strjoin("minishell: ", has_arg[0]);
+			final = ft_strjoin(tmp, ": Permission denied\n");
+			ft_putstr_fd(final, STDERR_FILENO);
+			free(tmp);
+			free(final);
+			free_args(has_arg);
+			return ;
+		}
+	}
+	free_ptargs(path_args, args);
+}
+
+int	execute_command(t_tree *node, t_data *data, t_venv **envp, int direction)
+{
+	char	**has_arg;
+	char	**path_args;
+	int		status;
+
+	has_arg = get_has_arg(node, direction);
+	status = builtins(has_arg, data, envp);
+	signal(SIGQUIT, SIG_DFL);
+	if (status != -1)
+	{
+		treelst_clear(&data->tree_lists);
+		free_envp(&data->envp);
+		free(data);
+		rl_clear_history();
+		free_args(has_arg);
+		exit(status);
+	}
+	if (has_arg[0][0] == '\'' || has_arg[0][0] == '\"')
+		return (show_errors(has_arg, &data->envp, 0));
+	path_args = get_path(envp, "PATH", has_arg[0]);
+	start_execution(has_arg, path_args, &status, envp);
+	signal(SIGQUIT, SIG_IGN);
+	if (status == 126)
+		return (126);
+	return (show_errors(has_arg, &data->envp, status));
 }

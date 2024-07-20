@@ -6,7 +6,7 @@
 /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/16 13:29:34 by roglopes          #+#    #+#             */
-/*   Updated: 2024/06/16 13:41:30 by roglopes         ###   ########.fr       */
+/*   Updated: 2024/07/14 15:54:00 by roglopes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -60,8 +60,8 @@ void	ft_pwd(int argc, t_token *tokens)
 
 void	ft_echo(t_token *tokens)
 {
-	t_token *current;
-	int	newline;
+	t_token	*current;
+	int		newline;
 
 	current = tokens->next;
 	newline = 1;

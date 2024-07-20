@@ -6,83 +6,84 @@
 /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/06/01 17:28:58 by roglopes          #+#    #+#             */
-/*   Updated: 2024/06/15 15:43:57 by roglopes         ###   ########.fr       */
+/*   Updated: 2024/07/13 18:20:24 by roglopes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
-// #include "../../../includes/mandatory/mini_shell.h"
+#include "../../../includes/mandatory/mini_shell.h"
+#include <stdio.h>
+#include <unistd.h>
 
-// char	*expand_variable(const char *variable)
-// {
-// 	char	*value;
-// 	char	*expanded_value;
+static void	get_content_init(char *content, int i, int start, char **final_line)
+{
+	char	*tmp;
+	char	*line;
 
-// 	value = getenv(variable);
-// 	if (value)
-// 	{
-// 		expanded_value = strdup(value);
-// 		if (!expanded_value)
-// 		{
-// 			perror("strdup failed");
-// 			return (NULL);
-// 		}
-// 		return (expanded_value);
-// 	}
-// 	return (NULL);
-// }
+	line = ft_strndup(&(content[start]), i - start);
+	tmp = ft_strjoin(*final_line, line);
+	free(*final_line);
+	free(line);
+	*final_line = tmp;
+}
 
-// void	append_char_expanded(char **expanded, const char **cursor)
-// {
-// 	size_t	current_length;
+static void	cquote(int *inquote, int *quote, int *i, char *content)
+{
+	if (*inquote == FT_ERROR)
+	{
+		*quote = content[(*i)++];
+		*inquote = TRUE;
+	}
+	else
+	{
+		*inquote = FT_ERROR;
+		(*i)++;
+	}
+}
 
-// 	current_length = ft_strlen(*expanded);
-// 	*expanded = realloc(*expanded, current_length + 2);
-// 	if (!*expanded)
-// 	{
-// 		perror("realloc failed");
-// 		exit(EXIT_FAILURE);
-// 	}
-// 	(*expanded)[current_length] = **cursor;
-// 	(*expanded)[current_length + 1] = '\0';
-// 	(*cursor)++;
-// }
+static int	content_change(int inquote, int quote, int *i, char *content)
+{
+	int	start;
 
-// void	expand_token(t_token *token)
-// {
-// 	const char	*cursor;
-// 	char		*expanded;
+	if (inquote == TRUE)
+	{
+		start = *i;
+		while (content[*i] && content[*i] != quote)
+			(*i)++;
+	}
+	else
+	{
+		start = *i;
+		while (content[*i] && content[*i] != '\'' && content[*i] != '\"')
+			(*i)++;
+	}
+	return (start);
+}
 
-// 	cursor = token->content;
-// 	expanded = malloc(ft_strlen(token->content) + 1);
-// 	if (!expanded)
-// 	{
-// 		perror("malloc failed");
-// 		return ;
-// 	}
-// 	expanded[0] = '\0';
-// 	while (*cursor)
-// 	{
-// 		if (*cursor == '$')
-// 		{
-// 			append_variable_expanded(&expanded, &cursor);
-// 		}
-// 		else
-// 		{
-// 			append_char_expanded(&expanded, &cursor);
-// 		}
-// 	}
-// 	free(token->content);
-// 	token->content = expanded;
-// }
+char	*remove_quotes_expansion(char *content)
+{
+	int		i;
+	char	*final_line;
+	int		inquote;
+	int		quote;
+	int		start;
 
-// void	expand_variables_tokens(t_token *head)
-// {
-// 	t_token	*current;
-
-// 	current = head;
-// 	while (current)
-// 	{
-// 		expand_token(current);
-// 		current = current->next;
-// 	}
-// }
+	i = 0;
+	final_line = NULL;
+	inquote = FT_ERROR;
+	quote = '\0';
+	while (content[i])
+	{
+		if (((content[i] == '\'' || content[i] == '\"')
+				&& inquote == FT_ERROR) || (inquote == TRUE
+				&& content[i] == quote))
+			cquote(&inquote, &quote, &i, content);
+		else if ((inquote == TRUE && content[i] != quote)
+			|| (inquote == FT_ERROR && content[i] != '\''
+				&& content[i] != '\"'))
+		{
+			start = content_change(inquote, quote, &i, content);
+			get_content_init(content, i, start, &final_line);
+		}
+	}
+	return (final_line);
+}

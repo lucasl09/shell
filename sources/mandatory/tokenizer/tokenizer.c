@@ -1,18 +1,6 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   tokenizer.c                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/04/13 23:12:15 by lluiz-de          #+#    #+#             */
-/*   Updated: 2024/06/02 12:52:39 by roglopes         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "../../../includes/mandatory/mini_shell.h"
 
-t_token	*newtoken(char *content, tokens type)
+t_token	*newtoken(char *content, t_tokens type)
 {
 	t_token	*node;
 
@@ -54,7 +42,7 @@ t_token	*last_token(t_token *lst)
 {
 	if (lst)
 	{
-		while (lst->next)
+		while (lst->next && lst->next->token != NONE)
 			lst = lst->next;
 		return (lst);
 	}

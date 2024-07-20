@@ -12,37 +12,43 @@
 
 #include "../../../includes/mandatory/mini_shell.h"
 
-int	afterprompt(int is_after)
-{
-	static int	after;
-
-	if (is_after != -1)
-		after = is_after;
-	return (after);
-}
-
 void	handle_signal(int signum)
 {
-	if (isatty(STDIN_FILENO))
+	(void)signum;
+	g_vsig = signum;
+}
+
+void	for_signals(void)
+{
+	signal(SIGINT, handle_new_line);
+	signal(SIGQUIT, SIG_IGN);
+}
+
+
+int	inside_heredoc(int inside_heredoc)
+{
+	static int	heredoc;
+
+	if (inside_heredoc != -1)
+		heredoc = inside_heredoc;
+	return (heredoc);
+}
+
+void	handle_new_line(int signum)
+{
+	(void)signum;
+	g_vsig = signum;
+	if (inside_heredoc(-1) == TRUE)
 	{
-		if (signum == SIGINT)
-		{
-			rl_on_new_line();
-			rl_replace_line("", 0);
-			ft_putstr_fd("\n", 2);
-			if (!afterprompt(-1))
-				rl_redisplay();
-		}
-		else if (signum == SIGQUIT)
-		{
-		}
-		else if (signum == SIGTERM)
-		{
-			write(STDOUT_FILENO, "exit\n", 5);
-			exit(EXIT_SUCCESS);
-		}
+		printf("\n");
+		close (STDIN_FILENO);
 	}
 	else
 	{
+		printf("\n");
+		rl_on_new_line();
+		rl_replace_line("", 0);
+		rl_redisplay();
+		g_vsig = 0;
 	}
 }

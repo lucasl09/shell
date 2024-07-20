@@ -1,91 +1,115 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/04/13 15:27:05 by roglopes          #+#    #+#             */
-/*   Updated: 2024/06/15 13:53:44 by roglopes         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "../../../includes/mandatory/mini_shell.h"
-#include <stdio.h>
+#include <readline/history.h>
+#include <readline/readline.h>
 #include <stdlib.h>
+#include <signal.h>
 #include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+#include <termios.h>
 
-// void	print_tokens(t_token *head)
-// {
-// 	while (head != NULL)
-// 	{
-// 		ft_printf("Recebido: %s \nToken de tipo: %d\n\n", head->text, head->type);
-// 		head = head->next;
-// 	}
-// }
+extern volatile int	g_vsig;
 
-// void	process_command_line(t_mini *mini)
-// {
-// 	t_token	*tokens;
-// 	int		input_fd = STDIN_FILENO;
-// 	int		output_fd = STDIN_FILENO;
-
-// 	if (mini->cmd_line && *mini->cmd_line)
-// 	{
-// 		tokens = input_tokenizer(mini->cmd_line);
-// 		expand_variables_tokens(tokens);
-// 		if (setup_redirection(tokens, &input_fd, &output_fd) == -1)
-// 		{
-// 			ft_free_tokens(tokens);
-// 			return ;
-// 		}
-// 		//handle_redirection_and_execution(tokens, input_fd, output_fd);
-// 		handle_redirection_and_execution(tokens);
-// 		print_tokens(tokens);
-// 		ft_free_tokens(tokens);
-// 	}
-// 	else
-// 	{
-// 		ft_printf("Failed to split command line\n");
-// 	}
-// }
-
-// void	main_loop(t_mini *mini)
-// {
-// 	while (1)
-// 	{
-// 		mini->cmd_line = prompt();
-// 		if (!mini->cmd_line)
-// 		{
-// 			ft_printf("\n");
-// 			exit(EXIT_SUCCESS);
-// 		}
-// 		process_command_line(mini);
-// 		free(mini->cmd_line);
-// 	}
-// }
-
-void	initialize_lists(t_token **token_list, t_tree **tree_list)
+void	get_term(int restore)
 {
-	ft_printf("\033[1;33mMINIHELL started!\033[0m\n");
-	signal(SIGINT, handle_signal);
-	signal(SIGQUIT, SIG_IGN);
-	signal(SIGTERM, handle_signal);
-	*token_list = malloc(sizeof(t_token *) + 1);
-	*tree_list = malloc(sizeof(t_tree *) + 1);
-	*token_list = NULL;
-	*tree_list = NULL;
+	static struct termios	terms;
+
+	if (!restore)
+		tcgetattr(STDIN_FILENO, &terms);
+	else
+		tcsetattr(STDIN_FILENO, TCSANOW, &terms);
 }
 
-int main(void)
+static int	input_prompt(char *input)
 {
-    while (1)
-    {
-        if (prompt() == 0)
-            break;
-    }
-    rl_clear_history();
-    return 0;
+	int	i;
+
+	if (!input)
+	{
+		printf("exit\n");
+		exit (0);
+	}
+	if (!ft_strncmp(input, "", 1))
+	{
+		free (input);
+		return (0);
+	}
+	i = -1;
+	while (input[++i])
+	{
+		if (ft_isspace(input[i]) == 0)
+			break ;
+	}
+	if (input[i] == '\0')
+	{
+		free (input);
+		return (0);
+	}
+	return (1);
+}
+
+static char	*each_user(t_venv **envp, char *tag)
+{
+	t_venv	*tmp;
+	char		*user;
+
+	tmp = env_lstsearch(envp, tag);
+	user = NULL;
+	if (!tag || !tmp)
+		user = ft_strjoin("$", "/\033[1;31mMINIHELL>$\033[0m : ");
+	else
+		user = ft_strjoin(tmp->value, "\033[1;31mMINIHELL>$\033[0m : ");
+	tmp = NULL;
+	return (user);
+}
+
+static int	get_input(t_venv **envp, int status)
+{
+	char		*input;
+	char		*in_user;
+	int			valid;
+
+	g_vsig = 0;
+	in_user = each_user(envp, "USER");
+	get_term(0);
+	input = readline(in_user);
+	free(in_user);
+	valid = input_prompt(input);
+	if (valid != TRUE)
+		return (valid);
+	add_history(input);
+	if (!initialize_checker(input))
+	{
+		free (input);
+		ft_putendl_fd("Error in syntax.", 2);
+		return (2);
+	}
+	return (start_minishell(envp, input, status));
+}
+
+int	main(void)
+{
+	t_venv	*envp;
+	int			status;
+
+	for_signals();
+	envp = NULL;
+	status = 0;
+	get_envp(&envp, __environ);
+	while (1)
+	{
+		status = get_input(&envp, status);
+		if (status == 131)
+			printf("Quit (core dumped)\n");
+		else if ((status == 2 || status == 0) && g_vsig == SIGINT)
+		{
+			printf("\n");
+			status = 130;
+		}
+		if (status == 131 || (status == 2 && g_vsig == SIGINT))
+			get_term(1);
+	}
+	close (STDIN_FILENO);
+	close (STDOUT_FILENO);
+	free_envp(&envp);
+	rl_clear_history();
+	return (status);
 }
