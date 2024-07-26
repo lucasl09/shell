@@ -73,7 +73,7 @@ int	ft_cd(char **input, t_venv **envp)
 		return (valid_cd(envp, NULL));
 	else if (input[2])
 	{
-		ft_putstr_fd("minishell: cd: too many arguments\n", STDERR_FILENO);
+		ft_putstr_fd("/\033[1;31mMINIHELL>$\033[0m: cd: too many arguments\n", STDERR_FILENO);
 		return (1);
 	}
 	return (valid_cd(envp, input[1]));
