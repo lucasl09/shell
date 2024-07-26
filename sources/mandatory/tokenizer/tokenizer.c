@@ -1,62 +1,118 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   tokenizer.c                                        :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2024/04/13 23:12:15 by lluiz-de          #+#    #+#             */
-/*   Updated: 2024/06/02 12:52:39 by roglopes         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
-
 #include "../../../includes/mandatory/mini_shell.h"
 
-t_token	*newtoken(char *content, tokens type)
+static t_token	*swap_tokens(t_token *current, t_token **token_list)
 {
-	t_token	*node;
+	t_token	*operator;
+	t_token	*data;
+	t_token	*first_cmd;
+	t_token	*last_cmd;
+	t_token	*next_last_cmd;
 
-	node = (t_token *)malloc(sizeof(t_token));
-	if (node == NULL)
+	operator = current->prev;
+	data = current;
+	first_cmd = current->next;
+	last_cmd = last_history_cmd(current);
+	next_last_cmd = last_cmd->next;
+	first_cmd->prev = operator->prev;
+	last_cmd->next = operator;
+	if (operator->prev)
+		operator->prev->next = first_cmd;
+	operator->prev = last_cmd;
+	operator->next = data;
+	data->prev = operator;
+	data->next = next_last_cmd;
+	if (next_last_cmd && next_last_cmd->prev)
+			next_last_cmd->prev = data;
+	if (operator == *token_list)
+		return (first_cmd);
+	else
 		return (NULL);
-	node->content = content;
-	node->token = type;
-	node->prev = NULL;
-	node->next = NULL;
-	return (node);
 }
 
-void	token_to_back(t_token **lst, t_token *new)
+static void	swap_multi(t_token *target, t_token *input)
 {
-	t_token	*current;
+	t_token	*first_cmd;
+	t_token	*last_cmd;
 
-	if (*lst == NULL && new != NULL)
-	{
-		*lst = new;
+	if (target == NULL || input == NULL)
 		return ;
-	}
-	if (new != NULL)
+	first_cmd = input;
+	last_cmd = last_history_cmd(input);
+	if (first_cmd->prev != NULL)
+		first_cmd->prev->next = last_cmd->next;
+	if (last_cmd->next != NULL)
+		last_cmd->next->prev = first_cmd->prev;
+	fix_ttokens(target, first_cmd, last_cmd, input);
+}
+
+static void	reorganize_multi_redirects(t_token *start, t_token *end)
+{
+	while (start)
 	{
-		current = *lst;
-		if (current != NULL)
+		if (start->token != CMD_TOKEN)
 		{
-			while (current->next != NULL)
-				current = current->next;
-			current->next = new;
-			new->prev = current;
+			if (start->prev)
+				start = start->prev;
+			break ;
 		}
 		else
-			*lst = new;
+			start = start->next;
+	}
+	while (end && end != start)
+	{
+		if (end->token == CMD_TOKEN)
+			swap_multi(start, end);
+		end = end->prev;
 	}
 }
 
-t_token	*last_token(t_token *lst)
+static t_token	*multiple_redirect_cmds(t_token *token_root)
 {
-	if (lst)
+	t_token	*start;
+	t_token	*end;
+	t_token	*last_end;
+
+	end = token_root;
+	while (end->next)
 	{
-		while (lst->next)
-			lst = lst->next;
-		return (lst);
+		if (end->next->token == PIPE)
+			break ;
+		else
+			end = end->next;
 	}
-	return (NULL);
+	last_end = end;
+	start = token_root;
+	reorganize_multi_redirects(start, end);
+	if (last_end->token == PIPE && last_end->next != NULL)
+		multiple_redirect_cmds(last_end->next);
+	while (token_root->prev != NULL)
+		token_root = token_root->prev;
+	return (token_root);
+}
+
+t_token	*reorganize_tokens(t_token **token_list)
+{
+	t_token	*current;
+	t_token	*initial;
+
+	current = *token_list;
+	initial = NULL;
+	if (!current || (current->next == NULL && current->content == NULL))
+		return (NULL);
+	else if (current->next == NULL)
+		return (*token_list);
+	while (current)
+	{
+		if ((current->token == DELIMITER_TOKEN || current->token == FILE_TOKEN)
+			&& current->next)
+		{
+			if (current->next->token == CMD_TOKEN)
+				initial = swap_tokens(current, token_list);
+		}
+		current = current->next;
+	}
+	if (initial != NULL)
+		return (multiple_redirect_cmds(initial));
+	else
+		return (multiple_redirect_cmds(*token_list));
 }

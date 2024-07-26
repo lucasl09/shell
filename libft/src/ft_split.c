@@ -34,18 +34,18 @@ static int	count_keywords(char *s, char c)
 char	**ft_split(char const *s, char c)
 {
 	char	**s_final;
-	int		len_keywords;
+	int		tlenwords;
 	int		len;
 	int		index;
 
 	index = -1;
 	if (s == NULL)
 		return (NULL);
-	len_keywords = count_keywords((char *)s, c);
-	s_final = (char **)ft_calloc(len_keywords + 1, sizeof(char *));
+	tlenwords = count_keywords((char *)s, c);
+	s_final = (char **)ft_calloc(tlenwords + 1, sizeof(char *));
 	if (s_final == NULL)
 		return (NULL);
-	while (index++, index < len_keywords)
+	while (index++, index < tlenwords)
 	{
 		len = 0;
 		while (*s && *s == c)

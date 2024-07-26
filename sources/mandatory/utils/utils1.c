@@ -6,7 +6,7 @@
 /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/07 06:34:32 by lluiz-de          #+#    #+#             */
-/*   Updated: 2024/06/16 16:10:07 by roglopes         ###   ########.fr       */
+/*   Updated: 2024/07/14 16:41:44 by roglopes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -44,48 +44,21 @@ char	*ft_strtok(char *str, const char *delim)
 	return (ret);
 }
 
-int	ft_lstsize_token(t_token *head)
+t_token	*initialize_rdt(int *i, char *cmd_line)
 {
-	int	count;
+	char	c;
 
-	count = 1;
-	if (head == NULL)
-		return (0);
-	while (head->next != NULL)
+	if (cmd_line[*i] == '<' || cmd_line[*i] == '>')
 	{
-		head = head->next;
-		count++;
-	}
-	return (count);
-}
-
-void	ft_unset(t_token *tokens)
-{
-	t_token *current;
-
-	current = tokens->next;
-
-	if (current == NULL)
-	{
-		ft_printf("unset: not enough arguments\n");
-		return ;
-	}
-
-	while (current != NULL)
-	{
-		if (unsetenv(current->content) != 0)
+		c = cmd_line[*i];
+		if (cmd_line[(*i) + 1] == c && cmd_line[(*i) + 2] == c)
 		{
-			perror("unsetenv");
+			ft_putstr_fd("Syntax error near unexpected token \'", 1);
+			ft_putchar_fd(c, 1);
+			ft_putendl_fd("\'", 1);
+			return (NULL);
 		}
-		current = current->next;
+		return (for_tredirect(i, cmd_line, c));
 	}
-}
-
-void	ft_valid_malloc(int *pipefds)
-{
-	if (!pipefds)
-	{
-		perror("malloc");
-		exit(EXIT_FAILURE);
-	}
+	return (NULL);
 }

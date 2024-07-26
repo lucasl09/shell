@@ -1,63 +1,100 @@
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   utils3.c                                           :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/07/13 15:12:33 by roglopes          #+#    #+#             */
+/*   Updated: 2024/07/13 15:12:35 by roglopes         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
+
 #include "../../../includes/mandatory/mini_shell.h"
 
-void	tree_add_left(t_tree **lst, t_tree *new)
+static void	division_args_cmds(t_token **token_list, t_tree **tree_lists)
 {
-	if (new == NULL)
-		return ;
-	if (*lst == NULL)
+	t_token	*current_token;
+	t_tree	*current_tree;
+
+	current_token = verify_lastlst(*token_list);
+	current_tree = *tree_lists;
+	if (current_tree == NULL)
 	{
-		*lst = new;
-		return ;
+		initialize_treenode(current_token, tree_lists, LEFT);
+		current_token = current_token->prev;
+		current_tree = *tree_lists;
 	}
-	t_tree *last = *lst;
-	while (last->left != NULL)
-		last = last->left;
-	last->left = new;
+	while (current_token)
+	{
+		initialize_treenode(current_token, &current_tree, LEFT);
+		current_token = current_token->prev;
+		current_tree = current_tree->left;
+	}
 }
 
-void	tree_add_right(t_tree **lst, t_tree *new)
+static void	start_tree(t_token **token_list, t_tokens operator, t_tree **tree_lists)
 {
-	if (new == NULL)
-		return ;
-	if (*lst == NULL)
+	t_token	*current;
+
+	while (operator > 5)
 	{
-		*lst = new;
-		return ;
+		current = verify_lastlst(*token_list);
+		while (current != NULL)
+		{
+			if (current->token == operator
+				|| (operator == 6 && current->token > 2))
+			{
+				break_nodes(current, tree_lists, 0);
+				return ;
+			}
+			else
+				current = current->prev;
+		}
+		operator--;
 	}
-	t_tree *last = *lst;
-	while (last->right != NULL)
-		last = last->right;
-	last->right = new;
+	return ;
 }
 
-t_type_r	open_file(const char *content)
+static t_token	*validate_token_list(t_token **token_list, t_tree **tree_lists)
 {
-	int	fd;
+	t_token	*current;
 
-	fd = open(content, O_RDONLY);
-	if (fd < 0)
+	if (!*token_list || !(*token_list)->content)
+		return (NULL);
+	current = verify_lastlst(*token_list);
+	if (current->prev == NULL)
 	{
-		close(fd);
-		return (FALSE);
+		initialize_treenode(current, tree_lists, LEFT);
+		return (NULL);
 	}
-	close(fd);
-	return (TRUE);
+	return (current);
 }
 
-type_tree	initialize_type(char *content, tokens token)
+void	eotokens(t_token **token_list, t_tree **tree_lists)
 {
-	type_tree	for_types;
+	t_token		*current;
+	int			operator;
 
-	if (token == WORD)
+	operator = PIPE;
+	current = validate_token_list(token_list, tree_lists);
+	if (current == NULL)
+		return ;
+	start_tree(token_list, operator, tree_lists);
+	if (*tree_lists != NULL)
 	{
-		if (content[0] == '"' || content[0] == '\'')
-			for_types = STRING;
-		else if (open_file(content))
-			for_types = FILENAME;
+		if ((*tree_lists)->tree_type != PIPE_LINE)
+			for_left_cnodes(6, *tree_lists, tree_lists, FALSE);
 		else
-			for_types = COMMAND;
+		{
+			while (operator > 5)
+			{
+				for_left_cnodes(operator, *tree_lists, tree_lists, FALSE);
+				for_right_cnodes(operator, *tree_lists, tree_lists, FALSE);
+				operator--;
+			}
+		}
 	}
-	else
-		for_types = token - 10;
-	return (for_types);
+	else if (*tree_lists == NULL)
+		division_args_cmds(token_list, tree_lists);
 }

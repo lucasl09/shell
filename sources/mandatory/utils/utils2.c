@@ -6,7 +6,7 @@
 /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/13 19:41:51 by lluiz-de          #+#    #+#             */
-/*   Updated: 2024/06/15 14:24:01 by roglopes         ###   ########.fr       */
+/*   Updated: 2024/07/13 15:24:36 by roglopes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -54,16 +54,67 @@ size_t	ft_strspn(const char *s, const char *accept)
 	return (i);
 }
 
-t_tree	*tree_new(char *content, tokens token_type)
+static int	parse_pipe(const char *input, int single_q, int double_q)
 {
-	t_tree	*node;
+	int	index;
+	int	valid;
 
-	node = (t_tree *)malloc(sizeof(t_tree));
-	if (node == NULL)
+	index = 0;
+	valid = 0;
+	while (input[index] != '\0')
+	{
+		if (input[index] == '\'')
+			single_q++;
+		else if (input[index] == '"')
+			double_q++;
+		if (input[index] == '|' && !(single_q % 2) && !(double_q % 2))
+		{
+			if (valid)
+				return (0);
+			valid = 1;
+		}
+		else if (ft_isspace(input[index]))
+			valid = 0;
+		else if (ft_isalnum(input[index]))
+			valid = 0;
+		index++;
+	}
+	return (valid);
+}
+
+int	check_pipe(const char *input)
+{
+	int	double_q;
+	int	single_q;
+	int	valid;
+
+	double_q = 0;
+	single_q = 0;
+	valid = 0;
+	if (input[0] == '|')
+		return (0);
+	valid = parse_pipe(input, single_q, double_q);
+	if (valid)
+		return (0);
+	return (1);
+}
+
+char	*ft_strndup(const char *src, int size)
+{
+	char	*dest;
+	int		len;
+	int		i;
+
+	i = 0;
+	len = size + 1;
+	dest = ft_calloc(len, sizeof(char));
+	if (!dest)
 		return (NULL);
-	node->content = content;
-	node->tree_type = initialize_checker(content, token_type); //Tentando corrigir tokens
-	node->left = NULL;
-	node->right = NULL;
-	return (node);
+	while ((i + 1) < len)
+	{
+		dest[i] = src[i];
+		i++;
+	}
+	dest[i] = '\0';
+	return (dest);
 }

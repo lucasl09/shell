@@ -6,38 +6,59 @@
 /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/04/14 18:05:13 by roglopes          #+#    #+#             */
-/*   Updated: 2024/06/15 16:52:45 by roglopes         ###   ########.fr       */
+/*   Updated: 2024/07/14 16:47:58 by roglopes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
 
-int		prompt(void)
+static t_data	*initialize_data(int status)
 {
-	char		*input;
-	t_token		*tokens;
-	t_tree		*in_tree;
+	t_data	*data;
 
-	initialize_lists(&tokens, &in_tree);
-	input = readline("\033[1;31mMINIHELL>$\033[0m ");
-	if (!ft_strncmp(input, "", 1))
+	data = NULL;
+	data = malloc(sizeof(t_data));
+	if (!data)
+		return (NULL);
+	data->token_list = NULL;
+	data->tree_lists = NULL;
+	data->envp = NULL;
+	data->for_sts = status;
+	data->has_env = FALSE;
+	return (data);
+}
+
+static int	build_data_storage(t_data *data, t_venv **envp, char *input)
+{
+	if (create_token(input, &data->token_list) == ERROR)
 		return (0);
-	add_history(input);
-	if (initialize_checker(input))
+	data->token_list = add_tlist(data, envp);
+	if (data->token_list == NULL)
 	{
-		if (initialize_buildtoken(input, &tokens) == ERROR)
-			return (0);
-		eotokens(&tokens, &in_tree);
-		// if (builtins(tokens))
-			return (1);
-		initialize_execution(&in_tree, &tokens);
-		free (input);
-	}
-	else
-	{
-		ft_putendl_fd("Error in syntax.", 2);
+		free_storage(&data);
 		return (0);
 	}
-	free_list(&in_tree, &tokens);
+	eotokens(&data->token_list, &data->tree_lists);
+	if (!data->tree_lists)
+		return (0);
+	clear_tokens(&data->token_list);
+	data->envp = *envp;
 	return (1);
 }
+
+int	initialize_mini(t_venv **envp, char *input, int status)
+{
+	t_data	*data;
+
+	data = initialize_data(status);
+	signal(SIGINT, putnewline);
+	if (!build_data_storage(data, envp, input))
+		return (0);
+	status = initialize_execs(data, envp);
+	signal(SIGINT, putnewline);
+	find_hd_delimiter(data->tree_lists);
+	if (data)
+		free_storage(&data);
+	return (status);
+}
+

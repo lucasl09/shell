@@ -1,15 +1,22 @@
-#include "../../../includes/mandatory/mini_shell.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/wait.h>
+// /* ************************************************************************** */
+// /*                                                                            */
+// /*                                                        :::      ::::::::   */
+// /*   init_check.c                                       :+:      :+:    :+:   */
+// /*                                                    +:+ +:+         +:+     */
+// /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
+// /*                                                +#+#+#+#+#+   +#+           */
+// /*   Created: 2024/07/13 14:10:28 by roglopes          #+#    #+#             */
+// /*   Updated: 2024/07/13 16:52:08 by roglopes         ###   ########.fr       */
+// /*                                                                            */
+// /* ************************************************************************** */
 
-static int	has_quotes(const char *input)
+#include "../../../includes/mandatory/mini_shell.h"
+
+int	has_quotes(const char *input)
 {
 	char	quotes;
 	int		index;
-	
+
 	index = 0;
 	quotes = '\0';
 	while (input[index] != '\0')
@@ -28,7 +35,7 @@ static int	has_quotes(const char *input)
 	return (1);
 }
 
-static int	has_pipe(const char *input)
+int	has_pipe(const char *input)
 {
 	int	index;
 	int	dbquote;
@@ -47,7 +54,7 @@ static int	has_pipe(const char *input)
 			sgquote++;
 		else if (input[index] == '"')
 			dbquote++;
-		if (input[index] == '|' && !(sgquote % 2) && !(dbquote %2))
+		if (input[index] == '|' && !(sgquote % 2) && !(dbquote % 2))
 		{
 			if (is_valid)
 				return (0);
@@ -62,7 +69,7 @@ static int	has_pipe(const char *input)
 	return (1);
 }
 
-static int	has_redirect(char const *input)
+int	has_redirect(char const *input)
 {
 	int	index;
 	int	dbquote;
@@ -92,13 +99,14 @@ static int	has_redirect(char const *input)
 	return (1);
 }
 
-int		initialize_checker(const char *prompt)
+
+int	return_checker(const char *input)
 {
-	if (!has_quotes(prompt))
+	if (!has_quotes(input))
 		return (0);
-	if (!has_pipe(prompt))
+	if (!has_pipe(input))
 		return (0);
-	if (!has_redirect(prompt))
+	if (!has_redirect(input))
 		return (0);
 	return (1);
 }

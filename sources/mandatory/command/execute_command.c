@@ -6,95 +6,129 @@
 /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/05/05 16:48:42 by roglopes          #+#    #+#             */
-/*   Updated: 2024/06/16 14:32:08 by roglopes         ###   ########.fr       */
+/*   Updated: 2024/07/14 16:10:08 by roglopes         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
+#include <readline/readline.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <signal.h>
+#include <fcntl.h>
 
-void	print_environment(void)
+t_tree	*find_cmd(t_tree **root, int *count)
 {
-	extern char	**environ;
-	char		**env;
+	t_tree	*tmp;
+	t_tree	*cmd;
 
-	env = environ;
-	while (*env != NULL)
+	if (!(*root) || !root)
+		return (NULL);
+	tmp = *root;
+	cmd = NULL;
+	(*count) = 0;
+	while (tmp && tmp->tree_type != COMMAND)
 	{
-		ft_printf("%s\n", *env);
-		env++;
+		(*count)++;
+		tmp = tmp->left;
 	}
+	if (!tmp)
+		return (NULL);
+	cmd = tmp;
+	tmp = NULL;
+	return (cmd);
 }
 
-char	**get_args(char *content)
+int	exec_all_ast(t_tree *node, t_data *data, t_tree *cmd, int *fd)
 {
-	char	**quote;
-	char	**has_arg;
+	int	status;
+	int	fork_cmd;
 
-	quote = NULL;
-	has_arg = NULL;
-	if (content[0] == '\'')
-		quote = ft_split(content, '\'');
-	else if (content[0] == '\"')
-		quote = ft_split(content, '\"');
-	if (quote != NULL)
+	status = manage_tree_rdt(node, &cmd);
+	if (cmd && status != KO && data->attribute == FALSE)
 	{
-		has_arg = ft_split(quote[0], ' ');
-		free(quote);
+		fork_cmd = fork();
+		if (fork_cmd == 0)
+		{
+			status = execute_command(cmd, data, &data->envp, LEFT);
+			free_storage(&data);
+			fkclose(fd, NULL);
+			close (STDIN_FILENO);
+			close (STDOUT_FILENO);
+			exit (status);
+		}
+		waitpid(fork_cmd, &status, 0);
+		status = endpipes(&status, data);
+	}
+	else if (cmd && status != KO)
+		status = execute_command(cmd, data, &data->envp, LEFT);
+	dup2(fd[0], STDIN_FILENO);
+	dup2(fd[1], STDOUT_FILENO);
+	fkclose(fd, NULL);
+	return (status);
+}
+
+int	execute_all_command(t_data *data, t_tree *node)
+{
+	int		status;
+	char	**cmd_args;
+
+	status = 0;
+	if (node->left && node->left->tree_type == COMMAND)
+		data->direction = LEFT;
+	else
+		data->direction = RIGHT;
+	cmd_args = if_exit_execute(node, data->direction);
+	if (cmd_args != NULL)
+		return (end_evg(data, &data->envp, cmd_args));
+	status = execute_command(node, data, &data->envp, data->direction);
+	return (status);
+}
+
+int	execute_ast(t_tree *node, t_data *data)
+{
+	t_tree	*cmd;
+	int		fd[2];
+
+	if (node == NULL)
+		return (OTHERS);
+	cmd = NULL;
+	if (node->tree_type == 18)
+		return (execute_pipe(node, data));
+	else if (node->tree_type >= 14 && node->tree_type < 18)
+	{
+		fd[0] = dup(STDIN_FILENO);
+		fd[1] = dup(STDOUT_FILENO);
+		return (exec_all_ast(node, data, cmd, fd));
 	}
 	else
-		has_arg = ft_split(content, ' ');
-
-	return (has_arg);
+		return (execute_all_command(data, node));
 }
 
-int	execute_command(char *content)
+int	initialize_execs(t_data *data, t_venv **envp)
 {
-	char	**has_arg;
-	char	**args;
-	char	*path;
-	int		i;
+	t_tree	*root;
+	int		status;
 
-	has_arg = get_args(content);
-	path = ft_strdup("/bin/");
-	if (path == NULL)
+	status = 0;
+	if (data->tree_lists == NULL || data->tree_lists == NULL)
+		return (OTHERS);
+	root = data->tree_lists;
+	status = find_heredocs(root, data, envp);
+	if (status != 0)
 	{
-		perror("ft_strdup");
-		exit(EXIT_FAILURE);
+		if (status != 130)
+		{
+			ft_putstr_fd("\033[1;31mMINIHELL>$\033[0m: syntax error ", STDERR_FILENO);
+			ft_putstr_fd("near unexpected token `newline'", STDERR_FILENO);
+		}
+		return (status);
 	}
-	i = 0;
-	while (has_arg[i])
-		i++;
-	args = (char **)malloc((i + 2) * sizeof(char *));
-	if (args == NULL)
-	{
-		perror("malloc");
-		free(path);
-		exit(EXIT_FAILURE);
-	}
-	i = 0;
-	args[0] = ft_strjoin(path, has_arg[0]);
-	while (has_arg[i])
-	{
-		args[i + 1] = has_arg[i];
-		i++;
-	}
-	args[i + 1] = NULL;
-	if (execve(args[0], &args[1], __environ) == -1)
-	{
-		perror("execve");
-		i = 0;
-		while (args[i])
-			free(args[i++]);
-		free(args);
-		free(path);
-		free(has_arg);
-		return (ERROR);
-	}
-	i = 0;
-	while (args[i])
-		free(args[i++]);
-	free(args);
-	free(has_arg);
-	free(path);
-	return (TRUE);
+	data->attribute = FALSE;
+	data->direction = LEFT;
+	if (root->right == NULL && (root->left == NULL || root->left != NULL))
+		status = for_each_cmd(root, data, envp);
+	else
+		status = execute_ast(root, data);
+	return (status);
 }
