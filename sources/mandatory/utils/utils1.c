@@ -11,54 +11,112 @@
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
+#include <unistd.h>
+#include <stdio.h>
 
-char	*ft_strspn_end(char *str, const char *delim)
+void	here_doc_eof(int line_num, char *content, char *line)
 {
-	while (*str && strchr(delim, *str))
-		str++;
-	return (str);
-}
+	char	*temp;
+	char	*temp2;
 
-char	*ft_strtok(char *str, const char *delim)
-{
-	static char	*last;
-	char		*ret;
-
-	if (str)
-		last = str;
-	if (!last || !*last)
-		return (NULL);
-	last = ft_strspn_end(last, delim);
-	if (!*last)
-		return (NULL);
-	ret = last;
-	while (*last && !strchr(delim, *last))
-		last++;
-	if (*last)
+	if (line == NULL)
 	{
-		*last = '\0';
-		last++;
+		temp = ft_itoa(line_num);
+		temp2 = ft_strjoin("minihell: warning: here-document at line ", temp);
+		free(temp);
+		temp = ft_strjoin(temp2, " delimited by end-of-file (wanted `");
+		free(temp2);
+		temp2 = ft_strjoin(temp, content);
+		free(temp);
+		temp = ft_strjoin(temp2, ")\n");
+		free(temp2);
+		ft_putstr_fd(temp, STDERR_FILENO);
+		free(temp);
 	}
 	else
-		last = NULL;
-	return (ret);
+	{
+		free (line);
+		line = NULL;
+	}
 }
 
-t_token	*initialize_rdt(int *i, char *cmd_line)
+int	release_heredoc(t_tree *opr)
 {
-	char	c;
-
-	if (cmd_line[*i] == '<' || cmd_line[*i] == '>')
+	if (opr == NULL)
+		return (0);
+	if (ft_strncmp(opr->content, "<<", 3) == 0)
 	{
-		c = cmd_line[*i];
-		if (cmd_line[(*i) + 1] == c && cmd_line[(*i) + 2] == c)
+		if (opr->tree_type == INPUT)
 		{
-			ft_putstr_fd("Syntax error near unexpected token \'", 1);
-			ft_putchar_fd(c, 1);
-			ft_putendl_fd("\'", 1);
-			return (NULL);
+			if (unlink(opr->right->content) == -1)
+			{
+				perror("Error unlinking file");
+				return (-1);
+			}
 		}
-		return (for_tredirect(i, cmd_line, c));
 	}
-	return (NULL);
+	if (opr->left)
+		release_heredoc(opr->left);
+	if (opr->right)
+		release_heredoc(opr->right);
+	return (0);
+}
+
+int	vheredoc_quote(char *content)
+{
+	int	i;
+
+	i = 0;
+	while (content[i])
+	{
+		if (content[i] == '\'' || content[i] == '\"')
+			break ;
+		i++;
+	}
+	if (content[i] == '\0')
+		return (FALSE);
+	else
+		return (TRUE);
+}
+
+void	heredocwrite(char *line, int fd_heredoc,
+		t_data *data, t_venv **envp)
+{
+	char	*full_line;
+	char	*content;
+
+	content = NULL;
+	if (data->attribute == FALSE)
+		content = expand_env(line, envp, data);
+	if (content != NULL)
+	{
+		free(line);
+		line = content;
+	}
+	full_line = ft_strjoin(line, "\n");
+	ft_putstr_fd(full_line, fd_heredoc);
+	free(line);
+	line = NULL;
+	free(full_line);
+	full_line = NULL;
+}
+
+int	founded_hd(t_tree *stm, t_data *data, t_venv **envp)
+{
+	int			status;
+	static int	index;
+
+	status = 0;
+	if (stm == NULL)
+		return (status);
+	if (ft_strncmp(stm->content, "<<", 3) == 0)
+	{
+		if (stm->tree_type == HERE_DOC)
+			status = execute_heredoc(stm, data, envp, ++index);
+	}
+	if (stm->left)
+		status = founded_hd(stm->left, data, envp);
+	if (stm->right)
+		status = founded_hd(stm->right, data, envp);
+	return (status);
 }

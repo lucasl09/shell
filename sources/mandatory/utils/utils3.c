@@ -11,90 +11,105 @@
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
+#include <readline/history.h>
+#include <readline/readline.h>
+#include <stdio.h>
+#include <unistd.h>
 
-static void	division_args_cmds(t_token **token_list, t_tree **tree_lists)
+static int	exit_status_mini(char *input)
 {
-	t_token	*current_token;
-	t_tree	*current_tree;
+	int		i;
+	char	*temp;
+	char	*final;
 
-	current_token = verify_lastlst(*token_list);
-	current_tree = *tree_lists;
-	if (current_tree == NULL)
+	i = 0;
+	if (input[0] == '-')
+		return (156);
+	else if (input[0] == '+')
+		i++;
+	while (input[i])
 	{
-		initialize_treenode(current_token, tree_lists, LEFT);
-		current_token = current_token->prev;
-		current_tree = *tree_lists;
+		if (!ft_isdigit(input[i]))
+		{
+			temp = ft_strjoin("minihell: exit: ", input);
+			final = ft_strjoin(temp, ": numeric argument required");
+			free(temp);
+			ft_putendl_fd(final, STDERR_FILENO);
+			free(final);
+			return (2);
+		}
+		i++;
 	}
-	while (current_token)
-	{
-		initialize_treenode(current_token, &current_tree, LEFT);
-		current_token = current_token->prev;
-		current_tree = current_tree->left;
-	}
+	return (ft_atoi(input));
 }
 
-static void	start_tree(t_token **token_list, t_tokens operator, t_tree **tree_lists)
+void	error_mini(char **all_args)
 {
-	t_token	*current;
-
-	while (operator > 5)
-	{
-		current = verify_lastlst(*token_list);
-		while (current != NULL)
-		{
-			if (current->token == operator
-				|| (operator == 6 && current->token > 2))
-			{
-				break_nodes(current, tree_lists, 0);
-				return ;
-			}
-			else
-				current = current->prev;
-		}
-		operator--;
-	}
+	ft_putendl_fd("exit", 1);
+	ft_putendl_fd("minihell: exit: too many arguments", STDERR_FILENO);
+	free_trash(all_args);
 	return ;
 }
 
-static t_token	*validate_token_list(t_token **token_list, t_tree **tree_lists)
+int	exit_minihell(t_data *data, t_venv **envp, char **cmd_args)
 {
-	t_token	*current;
+	int	status;
 
-	if (!*token_list || !(*token_list)->content)
-		return (NULL);
-	current = verify_lastlst(*token_list);
-	if (current->prev == NULL)
+	status = 0;
+	if (ft_strncmp(cmd_args[0], "exit", 5) == 0 && cmd_args[1] == NULL)
+		status = 0;
+	else if (ft_strncmp(cmd_args[0], "exit", 5) == 0 && cmd_args[1] != NULL)
+		status = exit_status_mini(cmd_args[1]);
+	if (ft_strncmp(cmd_args[0], "exit", 5) == 0 && cmd_args[1] != NULL
+		&& cmd_args[2] != NULL && status != 2)
 	{
-		initialize_treenode(current, tree_lists, LEFT);
-		return (NULL);
+		error_mini(cmd_args);
+		return (1);
 	}
-	return (current);
+	free_trash(cmd_args);
+	ft_putendl_fd("exit", 1);
+	if (data->attribute == FALSE)
+	{
+		free_envp(envp);
+		rl_clear_history();
+		free_data(&data);
+		exit(status);
+	}
+	return (status);
 }
 
-void	eotokens(t_token **token_list, t_tree **tree_lists)
+int	check_exit(char *input)
 {
-	t_token		*current;
-	int			operator;
+	int	i;
 
-	operator = PIPE;
-	current = validate_token_list(token_list, tree_lists);
-	if (current == NULL)
-		return ;
-	start_tree(token_list, operator, tree_lists);
-	if (*tree_lists != NULL)
+	i = 0;
+	while (ft_isspace(input[i]) == 1)
+		i++;
+	if (ft_strncmp(&(input[i]), "exit", 4) == 0)
 	{
-		if ((*tree_lists)->tree_type != PIPE_LINE)
-			for_left_cnodes(6, *tree_lists, tree_lists, FALSE);
-		else
+		while (input[i + 4])
 		{
-			while (operator > 5)
-			{
-				for_left_cnodes(operator, *tree_lists, tree_lists, FALSE);
-				for_right_cnodes(operator, *tree_lists, tree_lists, FALSE);
-				operator--;
-			}
+			if (ft_isalnum(input[i + 4]) == 0 && ft_isspace(input[i + 4]) == 0)
+				return (FAILED);
+			i++;
 		}
+		return (SUCESS);
 	}
-	else if (*tree_lists == NULL)
-		division_args_cmds(token_list, tree_lists);
+	else
+		return (FAILED);
+}
+
+char	**if_exited(t_tree *node, int direction)
+{
+	char	**cmd_args;
+
+	if (node->tree_type != COMMAND)
+		node = node->right;
+	cmd_args = get_cmd_args(node, direction);
+	if (ft_strncmp(cmd_args[0], "exit", 5))
+	{
+		free_trash(cmd_args);
+		return (NULL);
+	}
+	return (cmd_args);
 }

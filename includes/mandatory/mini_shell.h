@@ -13,35 +13,16 @@
 #ifndef MINI_SHELL_H
 # define MINI_SHELL_H
 
-# include "../../libft/include/ft_printf.h"
+# include <sys/types.h>
 # include "../../libft/include/get_next_line.h"
 # include "../../libft/include/libft.h"
-# include <dirent.h>
-# include <errno.h>
-# include <fcntl.h>
-# include <grp.h>
-# include <limits.h>
-# include <pwd.h>
-# include <readline/history.h>
-# include <readline/readline.h>
-# include <signal.h>
-# include <stdbool.h>
-# include <stddef.h>
-# include <stdio.h>
-# include <stdlib.h>
-# include <string.h>
-# include <sys/errno.h>
-# include <sys/stat.h>
-# include <sys/types.h>
-# include <sys/wait.h>
-# include <unistd.h>
 
 typedef enum e_tokens		t_tokens;
 enum						e_tokens
 {
-	DELIMITER_TOKEN = -3,
+	DTOKEN = -3,
 	CMD_TOKEN = -2,
-	FILE_TOKEN = -1,
+	FTOKEN = -1,
 	NONE = 0,
 	WORD,
 	EXPANSION,
@@ -52,8 +33,8 @@ enum						e_tokens
 	PIPE,
 };
 
-typedef enum e_tree_type		t_type_tree;
-enum						e_tree_type
+typedef enum e_tree_typed		t_types_tree;
+enum						e_tree_typed
 {
 	STRING = 10,
 	DELIMITER,
@@ -66,8 +47,8 @@ enum						e_tree_type
 	PIPE_LINE,
 };
 
-typedef enum e_returned		t_typereturned;
-enum						e_returned
+typedef enum e_return		t_returned;
+enum						e_return
 {
 	END = 666,
 	ERROR = -1,
@@ -75,8 +56,8 @@ enum						e_returned
 	TRUE = 1,
 };
 
-typedef enum e_sides		t_forsided;
-enum						e_sides
+typedef enum e_fside		t_sided;
+enum						e_fside
 {
 	LEFT = 0,
 	RIGHT,
@@ -85,9 +66,9 @@ enum						e_sides
 typedef enum e_check		t_check;
 enum						e_check
 {
-	OTHERS = -2,
-	OK = 0,
-	KO = 1,
+	NFOUND = -2,
+	SUCESS = 0,
+	FAILED = 1,
 };
 
 typedef struct s_token		t_token;
@@ -103,7 +84,7 @@ typedef struct s_tree		t_tree;
 struct						s_tree
 {
 	char					*content;
-	t_type_tree				tree_type;
+	t_types_tree				tree_type;
 	t_token					*left_token;
 	t_token					*right_token;
 	t_tree					*left;
@@ -121,7 +102,7 @@ struct						s_venv
 typedef struct s_cmd		t_cmd;
 struct						s_cmd
 {
-	char					*bin;
+	char					*flagpath;
 	char					**executed;
 };
 
@@ -129,9 +110,9 @@ typedef struct s_data		t_data;
 struct						s_data
 {
 	t_token					*token_list;
-	t_tree					*tree_lists;
+	t_tree					*tree_listed;
 	t_venv				*envp;
-	int						for_sts;
+	int						endsts;
 	int						attribute;
 	int						has_env;
 	int						direction;
@@ -141,128 +122,129 @@ struct						s_data
 };
 
 extern volatile int			g_vsig;
-
-int							initialize_mini(t_venv **envp, char *input,
+int							init_minihell(t_venv **envp, char *input,
 								int status);
-int							inheredoc(int inheredoc);
-void						putnewline(int signum);
+int							inside_heredoc(int inside_heredoc);
+void						sig_newline(int signum);
 void						handle_signal(int signum);
-void						for_signals(void);
+void						init_signals(void);
 char						*ft_strndup(const char *src, int size);
-void	get_envp(t_venv **envp, char **environ);
-int							create_token(char *cmd_line, t_token **token_list);
-t_token						*for_tredirect(int *i, char *cmd_line,
+int							build_token(char *cmd_line, t_token **token_list);
+t_token						*create_redirect_token(int *i, char *cmd_line,
 								char c);
-void						for_tquote(char *cmd_line, int *size);
-t_token						*last_history_cmd(t_token *current);
-void						fix_ttokens(t_token *target, t_token *first_cmd,
+void						create_quote_token(char *cmd_line, int *size);
+t_token						*find_cmdtoken(t_token *current);
+void						relink_tokens(t_token *target, t_token *first_cmd,
 								t_token *last_cmd,
 								t_token *input);
-t_token						*initialize_rdt(int *i, char *cmd_line);
-t_token						*newtoken(char *content, t_tokens type);
-void						put_lasttoken(t_token **lst, t_token *new);
-t_token						*verify_lastlst(t_token *lst);
-void						clear_tokens(t_token **lst);
-t_token						*put_type_t(t_token *current,
+t_token						*build_redirect_token(int *i, char *cmd_line);
+t_token						*token_lstnew(char *content, t_tokens type);
+void						token_lstadd_back(t_token **lst, t_token *new);
+t_token						*token_lstlast(t_token *lst);
+void						tokenlst_clear(t_token **lst);
+t_token						*manage_all_ttypes(t_token *current,
 								int *has_operator, t_data *data,
 								t_venv **envp);
-t_token						*add_tlist(t_data *data, t_venv **envp);
-t_token						*add_venv(t_token *token, t_venv **envp,
+t_token						*manage_tlists(t_data *data, t_venv **envp);
+t_token						*manage_evar(t_token *token, t_venv **envp,
 								t_data *data);
-t_token						*fix_tredirects(t_token *root);
-int							parse_ttokens(char *cmd_line, int *size,
+t_token						*reorganize_redirect_tokens(t_token *stm);
+int							parse_created_tokens(char *cmd_line, int *size,
 								int has_quote);
-void						env_entry(char *env_key,
+void						env_searched(char *env_key,
 								char **final_line, t_venv **envp);
-char						*adjust_venv(int *i, char *content,
+char						*evarjoin(int *i, char *content,
 								char **final_line, t_data *data);
-void						for_words(int *i, char *content,
+void						concat_word(int *i, char *content,
 								char **final_line, int has_single_quote);
-t_token						*fixed_etokens(t_token *token,
+t_token						*fix_envtoken(t_token *token,
 								char **final_line, t_data *data);
 t_token						*reorganize_tokens(t_token **token_list);
 void						eotokens(t_token **token_list,
-								t_tree **tree_lists);
+								t_tree **tree_listed);
 void						tree_addright(t_tree **lst, t_tree *new);
 void						tree_addleft(t_tree **lst, t_tree *new);
 t_tree						*tree_new(char *content, t_tokens type);
-void						tree_clear(t_tree **lst);
-void						initialize_treenode(t_token *new_node,
-								t_tree **tree_lists, int direction);
-int	return_checker(const char *input);
-t_type_tree					initialize_checker(t_tokens token);
-void						verify_leftcmds(t_tree *node,
-								t_tree *current_tree_node);
-void						verify_rightcmds(t_tree *node,
-								t_tree *current_tree_node);
-t_tree						*break_nodes(t_token *current, t_tree **tree_lists,
+void						treelst_clear(t_tree **lst);
+void						build_tnode(t_token *new_node,
+								t_tree **tree_listed, int direction);
+t_types_tree					type_check(t_tokens token);
+void						has_left_cmds(t_tree *node,
+								t_tree *current_tnode);
+void						has_right_cmds(t_tree *node,
+								t_tree *current_tnode);
+t_tree						*cut_all(t_token *current, t_tree **tree_listed,
 								int state);
-void						for_left_cnodes(t_tokens operator,
-								t_tree *ast_current_node, t_tree **tree_lists,
+void						cut_tleft(t_tokens opr,
+								t_tree *current_node_in, t_tree **tree_listed,
 								int status);
-void						for_right_cnodes(t_tokens operator,
-								t_tree *ast_current_node, t_tree **tree_lists,
+void						cut_tright(t_tokens opr,
+								t_tree *current_node_in, t_tree **tree_listed,
 								int status);
-int							initialize_builtins(char **args, t_data *data,
+int							init_builtins(char **args, t_data *data,
 								t_venv **envp);
-int							ft_pwd(char *input);
-int							ft_cd(char **input, t_venv **envp);
+int							call_pwd(char *input);
+int							ft_changedir(char **input, t_venv **envp);
 int							ft_clear(char *input);
 int							ft_echo(char **arg, t_data *data);
 int							ft_env(t_venv **envp, int status);
 int							ft_unset(t_venv **head, char *key);
-void						ft_bexport(char *var, t_venv **envp);
-int							print_venv(t_venv *env);
-int							initialize_execs(t_data *data, t_venv **envp);
-int							execute_ast(t_tree *node, t_data *data);
+void						ft_exported_env(char *var, t_venv **envp);
+int							ft_envprints(t_venv *env);
+int							ongoing_exec(t_data *data, t_venv **envp);
+int							initialize_trees(t_tree *node, t_data *data);
 char						**get_cmd_args(t_tree *node, int direction);
 char						**get_path(t_venv **envp, char *var, char *cmd);
-t_tree						*find_cmd(t_tree **root, int *count);
-int							manage_tree_rdt(t_tree *node, \
+t_tree						*foundedcmd(t_tree **stm, int *count);
+int							rltree_redirect(t_tree *node, \
 								t_tree **cmd);
 int							execute_command(t_tree *node, t_data *data,
 								t_venv **envp, int direction);
-int							for_errors(char **cmd_args, t_venv **envp,
+int							execution_error(char **cmd_args, t_venv **envp,
 								int status);
 t_venv					*env_lstnew(char *key, char *value);
-void						env_lstadd_back(t_venv **lst, \
-								t_venv *new_node);
+void	env_lstadd_back(t_venv **lst, t_venv *new);
 void						env_lstclear(t_venv **lst);
 t_venv					*env_lstsearch(t_venv **lst, char *key);
 int							env_size(t_venv **env);
 void						get_envp(t_venv **envp, char **environ);
-int							verify_prompt(const char *input);
-int							check_pipe(const char *input);
+int							all_checked(const char *input);
+int							has_pipe_in(const char *input);
 void						fkclose(int *fd, char *error);
-void						free_evg(char **matrix);
-void						free_storage(t_data **data);
+void						free_trash(char **trash);
+void						free_data(t_data **data);
 void						free_envp(t_venv **envp);
-void						free_onlyargs(char **path_args, char **args);
-char						*ft_with_quote(char *content);
-char						*ft_with_word(char *content);
-char						*quotes_exp(char *content);
-int							input_rdt(t_tree *operator);
-int							output_rdt(t_tree *operator);
-int							rdt_expand(t_tree *operator);
-int							execute_heredoc(t_tree *operator, t_data *data,
+void						free_args(char **path_args, char **args);
+char						*arg_with_quote(char *content);
+char						*arg_just_word(char *content);
+char						*release_quotes_expand(char *content);
+int							put_redirect_in(t_tree *opr);
+int							put_redirect_out(t_tree *opr);
+int							append_redirects(t_tree *opr);
+int							execute_heredoc(t_tree *opr, t_data *data,
 								t_venv **envp, int index);
 char						*expand_env(char *content, t_venv **envp,
 								t_data *data);
-int							end_evg(t_data *data,
+int							exit_minihell(t_data *data,
 								t_venv **envp, char **cmd_args);
-int							if_exit(char *input);
-char						**if_exit_execute(t_tree *node, int direction);
-int							execute_pipe(t_tree *operator, t_data *data);
+int							check_exit(char *input);
+char						**if_exited(t_tree *node, int direction);
+int							execute_pipe(t_tree *opr, t_data *data);
 int							endpipes(int *status, t_data *data);
-int							for_each_cmd(t_tree *node, t_data *data, \
+int							executables_init(t_tree *node, t_data *data, \
 								t_venv **envp);
-void						endfile_heredoc(int line_num, char *content, \
+void						here_doc_eof(int line_num, char *content, \
 								char *line);
-int							find_hd_delimiter(t_tree *operator);
-int							verify_quotes_heredoc(char *content);
-void						writeheredoc(char *line, int fd_heredoc, \
+int							release_heredoc(t_tree *opr);
+int							vheredoc_quote(char *content);
+void						heredocwrite(char *line, int fd_heredoc, \
 								t_data *data, t_venv **envp);
-int							find_heredocs(t_tree *root, t_data *data,
+int							founded_hd(t_tree *stm, t_data *data,
 								t_venv **envp);
+int	ft_strncmp(const char *s1, const char *s2, size_t n);
+void	ft_putendl_fd(char *s, int fd);
+char	*ft_strjoin(char const *s1, char const *s2);
+int	execution_error(char **cmd_args, t_venv **envp, int status);
+void	initialize(void);
 
 #endif

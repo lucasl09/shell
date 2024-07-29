@@ -11,86 +11,89 @@
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
 
-int	input_rdt(t_tree *operator)
+int	put_redirect_in(t_tree *opr)
 {
 	t_tree	*tmp;
 	int		file_fd;
 
-	tmp = operator->right;
+	tmp = opr->right;
 	file_fd = open(tmp->content, O_RDONLY);
 	if (file_fd == -1)
 	{
 		fkclose(&file_fd, "minishell");
-		return (KO);
+		return (FAILED);
 	}
 	if (dup2(file_fd, STDIN_FILENO) == -1)
 	{
 		fkclose(&file_fd, "minishell");
-		return (KO);
+		return (FAILED);
 	}
 	close(file_fd);
 	tmp = NULL;
-	return (OK);
+	return (SUCESS);
 }
 
-int	output_rdt(t_tree *operator)
+int	put_redirect_out(t_tree *opr)
 {
 	t_tree	*tmp;
 	int		file_fd;
 
-	tmp = operator->right;
+	tmp = opr->right;
 	file_fd = open(tmp->content, O_CREAT | O_TRUNC | O_WRONLY, 0644);
 	if (file_fd == -1)
 	{
 		fkclose(&file_fd, "minishell");
-		return (KO);
+		return (FAILED);
 	}
 	if (dup2(file_fd, STDOUT_FILENO) == -1)
 	{
 		fkclose(&file_fd, "minishell");
-		return (KO);
+		return (FAILED);
 	}
 	close(file_fd);
 	tmp = NULL;
-	return (OK);
+	return (SUCESS);
 }
 
-int	rdt_expand(t_tree *operator)
+int	append_redirects(t_tree *opr)
 {
 	t_tree	*tmp;
 	int		file_fd;
 
-	tmp = operator->right;
+	tmp = opr->right;
 	file_fd = open(tmp->content, O_CREAT | O_APPEND | O_WRONLY, 0644);
 	if (file_fd == -1)
 	{
-		fkclose(&file_fd, "minishell");
-		return (KO);
+		fkclose(&file_fd, "minihell");
+		return (FAILED);
 	}
 	if (dup2(file_fd, STDOUT_FILENO) == -1)
 	{
-		fkclose(&file_fd, "minishell");
-		return (KO);
+		fkclose(&file_fd, "minihell");
+		return (FAILED);
 	}
 	close(file_fd);
 	tmp = NULL;
-	return (OK);
+	return (SUCESS);
 }
 
-static int	execute_operator(t_tree *operator)
+static int	exec_opr(t_tree *opr)
 {
-	if (operator->tree_type == INPUT)
-		return (input_rdt(operator));
-	else if (operator->tree_type == OUTPUT)
-		return (output_rdt(operator));
-	else if (operator->tree_type == APPEND)
-		return (rdt_expand(operator));
+	if (opr->tree_type == INPUT)
+		return (put_redirect_in(opr));
+	else if (opr->tree_type == OUTPUT)
+		return (put_redirect_out(opr));
+	else if (opr->tree_type == APPEND)
+		return (append_redirects(opr));
 	else
-		return (OTHERS);
+		return (NFOUND);
 }
 
-int	manage_tree_rdt(t_tree *node, t_tree **cmd)
+int	rltree_redirect(t_tree *node, t_tree **cmd)
 {
 	t_tree	*tmp;
 	int		count;
@@ -98,7 +101,7 @@ int	manage_tree_rdt(t_tree *node, t_tree **cmd)
 	int		status;
 
 	tmp = node;
-	*cmd = find_cmd(&tmp, &count);
+	*cmd = foundedcmd(&tmp, &count);
 	if (!cmd && node->right->tree_type == DELIMITER)
 		status = 0;
 	else
@@ -109,8 +112,8 @@ int	manage_tree_rdt(t_tree *node, t_tree **cmd)
 			while (tmp->left && index-- > 1)
 				tmp = tmp->left;
 			count--;
-			status = execute_operator(tmp);
-			if (status == KO)
+			status = exec_opr(tmp);
+			if (status == FAILED)
 				break ;
 			tmp = node;
 		}

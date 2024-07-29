@@ -1,11 +1,12 @@
+
+#include "../../../includes/mandatory/mini_shell.h"
 #include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <readline/readline.h>
 #include <signal.h>
-#include "../../../includes/mandatory/mini_shell.h"
 
-static void	exec_child_one(t_data *data, t_tree *node)
+static void	childprocess_t(t_data *data, t_tree *node)
 {
 	int	status;
 
@@ -20,18 +21,18 @@ static void	exec_child_one(t_data *data, t_tree *node)
 	rl_clear_history();
 	data->attribute = TRUE;
 	data->direction = LEFT;
-	status = execute_ast(node->left, data);
-	tree_clear(&data->tree_lists);
+	status = initialize_trees(node->left, data);
+	treelst_clear(&data->tree_listed);
 	env_lstclear(&data->envp);
-	free(data);
-	close(STDOUT_FILENO);
-	close(STDIN_FILENO);
-	if (status == KO)
-		exit(EXIT_FAILURE);
+	free (data);
+	close (STDOUT_FILENO);
+	close (STDIN_FILENO);
+	if (status == FAILED)
+		exit (EXIT_FAILURE);
 	exit(status);
 }
 
-static void	exec_child_two(t_data *data, t_tree *node)
+static void	childprocess_two(t_data *data, t_tree *node)
 {
 	int	status;
 
@@ -45,23 +46,23 @@ static void	exec_child_two(t_data *data, t_tree *node)
 	rl_clear_history();
 	data->attribute = TRUE;
 	data->direction = RIGHT;
-	status = execute_ast(node->right, data);
-	tree_clear(&data->tree_lists);
+	status = initialize_trees(node->right, data);
+	treelst_clear(&data->tree_listed);
 	env_lstclear(&data->envp);
-	free(data);
-	close(STDIN_FILENO);
-	close(STDOUT_FILENO);
-	if (status == KO)
-		exit(EXIT_FAILURE);
+	free (data);
+	close (STDIN_FILENO);
+	close (STDOUT_FILENO);
+	if (status == FAILED)
+		exit (EXIT_FAILURE);
 	exit(status);
 }
 
 int	endpipes(int *status, t_data *data)
 {
-	if (data->tree_lists)
-		tree_clear(&data->tree_lists);
+	if (data->tree_listed)
+		treelst_clear(&data->tree_listed);
 	if (data->token_list)
-		clear_tokens(&data->token_list);
+		tokenlst_clear(&data->token_list);
 	if (WIFEXITED(*status))
 		*status = WEXITSTATUS(*status);
 	return (*status);
@@ -69,7 +70,7 @@ int	endpipes(int *status, t_data *data)
 
 int	execute_pipe(t_tree *node, t_data *data)
 {
-	int	status;
+	int			status;
 
 	status = 0;
 	signal(SIGINT, handle_signal);
@@ -77,10 +78,10 @@ int	execute_pipe(t_tree *node, t_data *data)
 	{
 		data->fork[0] = fork();
 		if (data->fork[0] == 0)
-			exec_child_one(data, node);
+			childprocess_t(data, node);
 		data->fork[1] = fork();
 		if (data->fork[1] == 0)
-			exec_child_two(data, node);
+			childprocess_two(data, node);
 		fkclose(data->pipe_fd, NULL);
 		waitpid(data->fork[0], &status, 0);
 		waitpid(data->fork[1], &status, 0);

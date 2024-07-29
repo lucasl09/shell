@@ -1,29 +1,31 @@
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 static t_token	*swap_tokens(t_token *current, t_token **token_list)
 {
-	t_token	*operator;
+	t_token	*opr;
 	t_token	*data;
 	t_token	*first_cmd;
 	t_token	*last_cmd;
 	t_token	*next_last_cmd;
 
-	operator = current->prev;
+	opr = current->prev;
 	data = current;
 	first_cmd = current->next;
-	last_cmd = last_history_cmd(current);
+	last_cmd = find_cmdtoken(current);
 	next_last_cmd = last_cmd->next;
-	first_cmd->prev = operator->prev;
-	last_cmd->next = operator;
-	if (operator->prev)
-		operator->prev->next = first_cmd;
-	operator->prev = last_cmd;
-	operator->next = data;
-	data->prev = operator;
+	first_cmd->prev = opr->prev;
+	last_cmd->next = opr;
+	if (opr->prev)
+		opr->prev->next = first_cmd;
+	opr->prev = last_cmd;
+	opr->next = data;
+	data->prev = opr;
 	data->next = next_last_cmd;
 	if (next_last_cmd && next_last_cmd->prev)
 			next_last_cmd->prev = data;
-	if (operator == *token_list)
+	if (opr == *token_list)
 		return (first_cmd);
 	else
 		return (NULL);
@@ -37,12 +39,12 @@ static void	swap_multi(t_token *target, t_token *input)
 	if (target == NULL || input == NULL)
 		return ;
 	first_cmd = input;
-	last_cmd = last_history_cmd(input);
+	last_cmd = find_cmdtoken(input);
 	if (first_cmd->prev != NULL)
 		first_cmd->prev->next = last_cmd->next;
 	if (last_cmd->next != NULL)
 		last_cmd->next->prev = first_cmd->prev;
-	fix_ttokens(target, first_cmd, last_cmd, input);
+	relink_tokens(target, first_cmd, last_cmd, input);
 }
 
 static void	reorganize_multi_redirects(t_token *start, t_token *end)
@@ -103,7 +105,7 @@ t_token	*reorganize_tokens(t_token **token_list)
 		return (*token_list);
 	while (current)
 	{
-		if ((current->token == DELIMITER_TOKEN || current->token == FILE_TOKEN)
+		if ((current->token == DTOKEN || current->token == FTOKEN)
 			&& current->next)
 		{
 			if (current->next->token == CMD_TOKEN)

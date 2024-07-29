@@ -1,72 +1,89 @@
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdlib.h>
 
-t_type_tree	initialize_checker(t_tokens token)
+t_venv	*env_lstnew(char *key, char *value)
 {
-	t_type_tree	tree_type;
+	t_venv	*node;
 
-	if (token == WORD)
-		tree_type = STRING;
-	else if (token == CMD_TOKEN)
-		tree_type = COMMAND;
-	else if (token == FILE_TOKEN)
-		tree_type = FILENAME;
-	else if (token == DELIMITER_TOKEN)
-		tree_type = DELIMITER;
+	node = (t_venv *)malloc(sizeof(t_venv));
+	if (node == NULL)
+		return (NULL);
+	if (key)
+		node->key = ft_strdup(key);
 	else
-		tree_type = token + 11;
-	return (tree_type);
+		node->key = NULL;
+	if (value)
+		node->value = ft_strdup(value);
+	else
+		node->value = NULL;
+	node->next = NULL;
+	return (node);
 }
 
-void	verify_rightcmds(t_tree *node, t_tree *current_tree_node)
+void	env_lstadd_back(t_venv **lst, t_venv *new)
 {
-	t_token	*current;
-	t_token	*token;
-	int		has_operator;
+	t_venv	*current;
 
-	current = node->right_token;
-	has_operator = TRUE;
-	token = node->right_token;
-	while (current->next != NULL && current->content != NULL)
+	if (*lst == NULL && new != NULL)
 	{
-		if (current->token != CMD_TOKEN)
-			break ;
+		*lst = new;
+		return ;
+	}
+	if (new != NULL)
+	{
+		current = *lst;
+		while (current->next != NULL)
+			current = current->next;
+		current->next = new;
+	}
+}
+
+void	env_lstclear(t_venv **lst)
+{
+	t_venv	*current;
+	t_venv	*next;
+
+	current = *lst;
+	while (current != NULL)
+	{
+		next = current->next;
+		free (current->value);
+		free (current->key);
+		free (current);
+			current = next;
+	}
+	*lst = NULL;
+}
+
+t_venv	*env_lstsearch(t_venv **lst, char *key)
+{
+	t_venv	*current;
+	int			size;
+
+	size = ft_strlen(key) + 1;
+	current = *lst;
+	while (current != NULL)
+	{
+		if (ft_strncmp(current->key, key, size) == 0)
+			return (current);
 		current = current->next;
 	}
-	if (current->next == NULL || current->content == NULL)
-		has_operator = FALSE;
-	if (has_operator == FALSE)
-	{
-		while (token && token->content != NULL)
-		{
-			initialize_treenode(token, &current_tree_node, RIGHT);
-			token = token->next;
-		}
-	}
+	return (NULL);
 }
 
-void	verify_leftcmds(t_tree *node, t_tree *current_tree_node)
+int	env_size(t_venv **env)
 {
-	t_token	*current;
-	t_token	*token;
-	int		has_operator;
+	t_venv	*temp;
+	int			len;
 
-	current = node->left_token;
-	has_operator = TRUE;
-	token = node->left_token;
-	while (current->prev != NULL && current->content != NULL)
+	if (!env || !*env)
+		return (0);
+	len = 0;
+	temp = *env;
+	while (temp)
 	{
-		if (current->token != CMD_TOKEN)
-			break ;
-		current = current->prev;
+		len++;
+		temp = temp->next;
 	}
-	if (current->prev == NULL || current->content == NULL)
-		has_operator = FALSE;
-	if (has_operator == FALSE)
-	{
-		while (token && token->content != NULL)
-		{
-			initialize_treenode(token, &current_tree_node, LEFT);
-			token = token->prev;
-		}
-	}
+	return (len);
 }

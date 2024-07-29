@@ -59,7 +59,7 @@ static int	manage_content(int inside_quote, int quote, int *i, char *content)
 	return (start);
 }
 
-char	*quotes_exp(char *content)
+char	*release_quotes_expand(char *content)
 {
 	int		i;
 	char	*final_line;

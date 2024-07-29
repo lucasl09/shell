@@ -1,91 +1,73 @@
-#include <readline/readline.h>
-#include <stdio.h>
 #include "../../../includes/mandatory/mini_shell.h"
-#include <unistd.h>
+#include <fcntl.h>
 
-t_venv	*env_lstnew(char *key, char *value)
+t_types_tree	type_check(t_tokens token)
 {
-	t_venv	*node;
+	t_types_tree	tree_type;
 
-	node = (t_venv *)malloc(sizeof(t_venv));
-	if (node == NULL)
-		return (NULL);
-	if (key)
-		node->key = ft_strdup(key);
+	if (token == WORD)
+		tree_type = STRING;
+	else if (token == CMD_TOKEN)
+		tree_type = COMMAND;
+	else if (token == FTOKEN)
+		tree_type = FILENAME;
+	else if (token == DTOKEN)
+		tree_type = DELIMITER;
 	else
-		node->key = NULL;
-	if (value)
-		node->value = ft_strdup(value);
-	else
-		node->value = NULL;
-	node->next = NULL;
-	return (node);
+		tree_type = token + 11;
+	return (tree_type);
 }
 
-void	env_lstadd_back(t_venv **lst, t_venv *new)
+void	has_right_cmds(t_tree *node, t_tree *current_tnode)
 {
-	t_venv	*current;
+	t_token	*current;
+	t_token	*token;
+	int		has_operator;
 
-	if (*lst == NULL && new != NULL)
+	current = node->right_token;
+	has_operator = TRUE;
+	token = node->right_token;
+	while (current->next != NULL && current->content != NULL)
 	{
-		*lst = new;
-		return ;
-	}
-	if (new != NULL)
-	{
-		current = *lst;
-		while (current->next != NULL)
-			current = current->next;
-		current->next = new;
-	}
-}
-
-void	env_lstclear(t_venv **lst)
-{
-	t_venv	*current;
-	t_venv	*next;
-
-	current = *lst;
-	while (current != NULL)
-	{
-		next = current->next;
-		free (current->value);
-		free (current->key);
-		free (current);
-			current = next;
-	}
-	*lst = NULL;
-}
-
-t_venv	*env_lstsearch(t_venv **lst, char *key)
-{
-	t_venv	*current;
-	int			size;
-
-	size = ft_strlen(key) + 1;
-	current = *lst;
-	while (current != NULL)
-	{
-		if (ft_strncmp(current->key, key, size) == 0)
-			return (current);
+		if (current->token != CMD_TOKEN)
+			break ;
 		current = current->next;
 	}
-	return (NULL);
+	if (current->next == NULL || current->content == NULL)
+		has_operator = FALSE;
+	if (has_operator == FALSE)
+	{
+		while (token && token->content != NULL)
+		{
+			build_tnode(token, &current_tnode, RIGHT);
+			token = token->next;
+		}
+	}
 }
 
-int	env_size(t_venv **env)
+void	has_left_cmds(t_tree *node, t_tree *current_tnode)
 {
-	t_venv	*temp;
-	int			len;
+	t_token	*current;
+	t_token	*token;
+	int		has_operator;
 
-	if (!env || !*env)
-		return (0);
-	len = 0;
-	temp = *env;
-	while (temp)
+	current = node->left_token;
+	has_operator = TRUE;
+	token = node->left_token;
+	while (current->prev != NULL && current->content != NULL)
 	{
-		len++;
-		temp = temp->next;
+		if (current->token != CMD_TOKEN)
+			break ;
+		current = current->prev;
 	}
-	return (len);
+	if (current->prev == NULL || current->content == NULL)
+		has_operator = FALSE;
+	if (has_operator == FALSE)
+	{
+		while (token && token->content != NULL)
+		{
+			build_tnode(token, &current_tnode, LEFT);
+			token = token->prev;
+		}
+	}
 }

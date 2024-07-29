@@ -1,114 +1,98 @@
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdlib.h>
 
-static void	expand_status_venv(char *env_key, char **final_line, \
-									t_data *data)
+static void	fix_references(t_token *current, t_token *first_input,
+		t_token *last_input)
 {
-	char	*temp;
-	char	*status;
+	t_token	*last_output;
+	t_token	*first_output;
 
-	status = ft_itoa(data->for_sts);
-	temp = ft_strjoin(*final_line, status);
-	free (*final_line);
-	free (status);
-	free (env_key);
-	*final_line = temp;
-	return ;
+	first_output = current->next;
+	last_output = first_output->next;
+	while (last_output->next)
+	{
+		if (last_output->next->token == FTOKEN
+			|| last_output->next->token == GREAT
+			|| last_output->next->token == DGREAT)
+			last_output = last_output->next;
+		else
+			break ;
+	}
+	first_output->prev = last_input;
+	last_output->next = last_input->next;
+	if (last_input->next && last_input->next->prev)
+		last_input->next->prev = last_output;
+	first_input->prev = current;
+	last_input->next = first_output;
+	current->next = first_input;
 }
 
-void	env_entry(char *env_key, char **final_line, t_venv **envp)
+static void	fix_redirect_order(t_token *first_input)
 {
-	t_venv	*env;
-	char		*temp;
+	t_token	*current;
+	t_token	*last_input;
 
-	temp = NULL;
-	env = env_lstsearch(envp, env_key);
-	free (env_key);
-	if (env != NULL)
+	current = first_input->next;
+	while (current->next)
 	{
-		temp = ft_strjoin(*final_line, env->value);
-		free (*final_line);
-		*final_line = temp;
+		if (current->next->token == FTOKEN || current->next->token == DLESS
+			|| current->next->token == LESS)
+			current = current->next;
+		else
+			break ;
 	}
-	else
+	last_input = current;
+	current = first_input;
+	while (current)
 	{
-		if (*final_line)
-			free (*final_line);
-		*final_line = NULL;
+		if (current->token == CMD_TOKEN)
+			fix_references(current, first_input, last_input);
+		current = current->prev;
 	}
 }
 
-char	*adjust_venv(int *i, char *content, char **final_line, t_data *data)
+t_token	*reorganize_redirect_tokens(t_token *stm)
 {
-	int			start;
-	char		*env_key;
+	int		has_output_redirect;
+	int		in_order;
+	t_token	*current;
 
-	start = *i;
-	(*i)++;
-	data->has_env = TRUE;
-	while (content[*i])
+	has_output_redirect = FALSE;
+	in_order = TRUE;
+	current = stm;
+	while (current && in_order == TRUE)
 	{
-		if (ft_isspace(content[*i]) == 0 && content[*i] != '$' && \
-			content[*i] != '\'' && content[*i] != '\"')
+		if (current->token == LESS || current->token == DLESS)
 		{
-			if (content[++(*i) - 1] == '?')
-				break ;
+			if (has_output_redirect == TRUE)
+				in_order = FALSE;
 		}
+		else if (current->token == GREAT || current->token == DGREAT)
+			has_output_redirect = TRUE;
+		current = current->next;
+	}
+	if (in_order == FALSE)
+		fix_redirect_order(current->prev);
+	return (stm);
+}
+
+int	parse_created_tokens(char *cmd_line, int *size, int has_quote)
+{
+	int	i;
+
+	i = *size;
+	if (ft_isspace(cmd_line[i]) == 0)
+	{
+		if (cmd_line[i] == '>' || cmd_line[i] == '<' || (cmd_line[i] == '>'
+				&& cmd_line[i + 1] == '>')
+			|| (cmd_line[i] == '<' && cmd_line[i + 1] == '<'))
+			return (-1);
 		else
-			break ;
+			(*size)++;
 	}
-	env_key = ft_strndup(&content[start + 1], (*i) - start - 1);
-	if (env_key[0] == '?')
-	{
-		expand_status_venv(env_key, final_line, data);
-		return (NULL);
-	}
-	return (env_key);
-}
-
-void	for_words(int *i, char *content, char **final_line, int has_s_quote)
-{
-	char	*line;
-	char	*temp;
-	int		start;
-
-	start = *i;
-	while (content[*i])
-	{
-		if (content[*i] == '$' && has_s_quote == FALSE && \
-			content[(*i) + 1] && ft_isspace(content[(*i) + 1]) == 0 \
-			&& content[(*i) + 1] != '\'' && content[(*i) + 1] != '\"')
-			break ;
-		(*i)++;
-	}
-	line = ft_strndup(&(content[start]), (*i) - start);
-	temp = ft_strjoin(*final_line, line);
-	free (*final_line);
-	free (line);
-	*final_line = temp;
-}
-
-t_token	*fixed_etokens(t_token *token, char **final_line, t_data *data)
-{
-	t_token	*next;
-
-	free (token->content);
-	if (*final_line != NULL)
-	{
-		token->content = *final_line;
-		return (token);
-	}
+	else if (ft_isspace(cmd_line[i]) == 1 && has_quote == TRUE)
+		(*size)++;
 	else
-	{
-		next = token->next;
-		if (token->prev)
-			token->prev->next = token->next;
-		if (token->next)
-			token->next->prev = token->prev;
-		if (next)
-			data->token_list = next;
-		else
-			data->token_list = token->prev;
-		free (token);
-		return (next);
-	}
+		i = -1;
+	return (i);
 }

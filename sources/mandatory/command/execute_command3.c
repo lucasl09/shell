@@ -1,104 +1,99 @@
+#include "../../../includes/mandatory/mini_shell.h"
 #include <readline/readline.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "../../../includes/mandatory/mini_shell.h"
 
-static int	end_evg_status(char *input)
+static void	is_valid_cmd(char **cmd_args, int i, t_tree *current)
 {
-	int		i;
-	char	*temp;
-	char	*final;
-
-	i = 0;
-	if (input[0] == '-')
-		return (156);
-	else if (input[0] == '+')
-		i++;
-	while (input[i])
-	{
-		if (!ft_isdigit(input[i]))
-		{
-			temp = ft_strjoin("\033[1;31mMINIHELL>$\033[0m: exit: ", input);
-			final = ft_strjoin(temp, ": numeric argument required");
-			free(temp);
-			ft_putendl_fd(final, STDERR_FILENO);
-			free(final);
-			return (2);
-		}
-		i++;
-	}
-	return (ft_atoi(input));
-}
-
-void	end_evg_error(char **all_args)
-{
-	ft_putendl_fd("exit", 1);
-	ft_putendl_fd("\033[1;31mMINIHELL>$\033[0m: exit: too many arguments", STDERR_FILENO);
-	free_evg(all_args);
-	return ;
-}
-
-int	end_evg(t_data *data, t_venv **envp, char **cmd_args)
-{
-	int	status;
-
-	status = 0;
-	if (ft_strncmp(cmd_args[0], "exit", 5) == 0 && cmd_args[1] == NULL)
-		status = 0;
-	else if (ft_strncmp(cmd_args[0], "exit", 5) == 0 && cmd_args[1] != NULL)
-		status = end_evg_status(cmd_args[1]);
-	if (ft_strncmp(cmd_args[0], "exit", 5) == 0 && cmd_args[1] != NULL
-		&& cmd_args[2] != NULL && status != 2)
-	{
-		end_evg_error(cmd_args);
-		return (1);
-	}
-	free_evg(cmd_args);
-	ft_putendl_fd("exit", 1);
-	if (data->attribute == FALSE)
-	{
-		free_envp(envp);
-		rl_clear_history();
-		free_storage(&data);
-		exit(status);
-	}
-	return (status);
-}
-
-int	if_exit(char *input)
-{
-	int	i;
-
-	i = 0;
-	while (ft_isspace(input[i]) == 1)
-		i++;
-	if (ft_strncmp(&(input[i]), "exit", 4) == 0)
-	{
-		while (input[i + 4])
-		{
-			if (ft_isalnum(input[i + 4]) == 0 && ft_isspace(input[i + 4]) == 0)
-				return (KO);
-			i++;
-		}
-		return (OK);
-	}
+	if ((current->content)[0] == '\'' || (current->content)[0] == '\"')
+		cmd_args[i] = arg_with_quote(current->content);
 	else
-		return (KO);
+		cmd_args[i] = arg_just_word(current->content);
 }
 
-char	**if_exit_execute(t_tree *node, int direction)
+static char	**arg_sided_left(char **cmd_args, int size, t_tree *node)
 {
-	char	**cmd_args;
+	t_tree	*current;
 
-	if (node->tree_type != COMMAND)
-		node = node->right;
-	cmd_args = get_cmd_args(node, direction);
-	if (ft_strncmp(cmd_args[0], "exit", 5))
+	current = node;
+	while (current->left)
 	{
-		free_evg(cmd_args);
-		return (NULL);
+		if (current->tree_type == COMMAND)
+			size++;
+		else
+			return (NULL);
+		current = current->left;
+	}
+	cmd_args = ft_calloc(sizeof(char *), (size + 1));
+	current = node;
+	size--;
+	while (size >= 0)
+	{
+		is_valid_cmd(cmd_args, size, current);
+		current = current->left;
+		size--;
 	}
 	return (cmd_args);
+}
+
+static char	**arg_sided_right(char **cmd_args, int size, t_tree *node)
+{
+	t_tree	*current;
+	int		i;
+
+	current = node;
+	i = 0;
+	while (current->right)
+	{
+		if (current->tree_type == COMMAND)
+			size++;
+		else
+			return (NULL);
+		current = current->right;
+	}
+	cmd_args = ft_calloc(sizeof(char *), (size + 1));
+	current = node;
+	size--;
+	while (i <= size)
+	{
+		is_valid_cmd(cmd_args, i, current);
+		current = current->right;
+		i++;
+	}
+	return (cmd_args);
+}
+
+char	**get_cmd_args(t_tree *node, int direction)
+{
+	char	**cmd_args;
+	int		size;
+
+	size = 1;
+	cmd_args = NULL;
+	if (direction == LEFT)
+		cmd_args = arg_sided_left(cmd_args, size, node);
+	else
+		cmd_args = arg_sided_right(cmd_args, size, node);
+	return (cmd_args);
+}
+
+char	**get_path(t_venv **envp, char *var, char *cmd)
+{
+	t_venv	*envp_temp;
+	char		**full_path;
+
+	if (!*envp)
+		return (NULL);
+	envp_temp = env_lstsearch(envp, var);
+	if (!envp_temp)
+	{
+		full_path = (char **)malloc(sizeof(char *) * (2));
+		full_path[0] = ft_strdup(cmd);
+		full_path[1] = NULL;
+	}
+	else
+		full_path = ft_split(envp_temp->value, ':');
+	return (full_path);
 }

@@ -38,14 +38,14 @@ static void	rebuild_quote(char *content, char **full_line, char *remove_quotes,
 	if (content[i] == '\'' || content[i] == '\"')
 	{
 		old_line = *full_line;
-		temp = ft_with_quote(&(content[i]));
+		temp = arg_with_quote(&(content[i]));
 		*full_line = ft_strjoin(*full_line, temp);
 		free(temp);
 		free(old_line);
 	}
 }
 
-char	*ft_with_quote(char *content)
+char	*arg_with_quote(char *content)
 {
 	char	*remove_quotes;
 	int		i;
@@ -110,7 +110,7 @@ static void	rebuild_word(char **full_line, char *temp, int *i, int has_quote)
 	}
 }
 
-char	*ft_with_word(char *content)
+char	*arg_just_word(char *content)
 {
 	int		i;
 	char	*full_line;
@@ -124,7 +124,7 @@ char	*ft_with_word(char *content)
 		has_quote = 0;
 		if (content[i] == '\'' || content[i] == '\"')
 		{
-			temp = ft_with_quote(&(content[i]));
+			temp = arg_with_quote(&(content[i]));
 			has_quote = 2;
 		}
 		else

@@ -1,120 +1,57 @@
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdlib.h>
 
-static int	upgrade_args_cmds(t_token *current, int direction)
+t_token	*manage_tlists(t_data *data, t_venv **envp)
 {
-	if (direction == RIGHT)
+	t_token	*current;
+	int		has_operator;
+
+	current = data->token_list;
+	has_operator = FALSE;
+	current = manage_all_ttypes(current, &has_operator, data, envp);
+	if (!data->token_list || data->token_list->next == NULL)
+		return (current);
+	if (has_operator == FALSE)
 	{
-		while (current->next)
+		current = data->token_list;
+		while (current)
 		{
-			if (current->next->token == WORD)
-				current->next->token = CMD_TOKEN;
-			else
+			current = manage_evar(current, envp, data);
+			if (current == NULL)
 				break ;
+			current->token = CMD_TOKEN;
 			current = current->next;
 		}
 	}
-	else
-	{
-		while (current->prev)
-		{
-			if (current->prev->token == WORD)
-				current->prev->token = CMD_TOKEN;
-			else
-				break ;
-			current = current->prev;
-		}
-	}
-	return (TRUE);
-}
-
-static int	upgrade_operator(t_token *current)
-{
-	char	*new_content;
-
-	if ((current->token >= 3 && current->token <= 5) && current->next)
-	{
-		if (current->next->token == WORD)
-		{
-			current->next->token = FILE_TOKEN;
-			new_content = quotes_exp(current->next->content);
-			free(current->next->content);
-			current->next->content = new_content;
-		}
-	}
-	else if (current->token == FILE_TOKEN && current->next)
-	{
-		if (current->next->token == WORD)
-			upgrade_args_cmds(current, RIGHT);
-	}
-	if ((current->token >= 3 && current->token <= 5) && current->prev)
-	{
-		if (current->prev->token == WORD)
-			upgrade_args_cmds(current, LEFT);
-	}
-	return (TRUE);
-}
-
-static int	upgrade_pipe(t_token *current)
-{
-	if (current->token == PIPE && current->next)
-	{
-		if (current->next->token == WORD)
-			upgrade_args_cmds(current, RIGHT);
-	}
-	if (current->token == PIPE && current->prev)
-	{
-		if (current->prev->token == WORD)
-			upgrade_args_cmds(current, LEFT);
-	}
-	return (TRUE);
-}
-
-static int	upgrade_dless(t_token *current)
-{
-	if (current->token == DLESS && current->next)
-	{
-		if (current->next->token == WORD)
-			current->next->token = DELIMITER_TOKEN;
-	}
-	else if (current->token == DELIMITER_TOKEN && current->next)
-	{
-		if (current->next->token == WORD)
-			upgrade_args_cmds(current, RIGHT);
-	}
-	if (current->token == DLESS && current->prev)
-	{
-		if (current->prev->token == WORD)
-			upgrade_args_cmds(current, LEFT);
-	}
-	return (TRUE);
-}
-
-t_token	*put_type_t(t_token *current, int *has_operator,
-				t_data *data, t_venv **envp)
-{
-	if (current->next == NULL)
-	{
-		current->token = CMD_TOKEN;
-		current = add_venv(current, envp, data);
-		return (reorganize_tokens(&(data->token_list)));
-	}
-	while (current->next)
-	{
-		if ((current->token >= 3 && current->token <= 5) && current->next)
-			*has_operator = upgrade_operator(current);
-		else if ((current->token == DLESS || current->token == DELIMITER_TOKEN)
-			&& current->next)
-			*has_operator = upgrade_dless(current);
-		else if (current->token == PIPE && current->next)
-			*has_operator = upgrade_pipe(current);
-		if (((current->token >= 3 && current->token <= 5)
-				|| current->token == FILE_TOKEN) && current->prev)
-			*has_operator = upgrade_operator(current);
-		else if (current->token == DLESS && current->prev)
-			*has_operator = upgrade_dless(current);
-		else if (current->token == PIPE && current->prev)
-			*has_operator = upgrade_pipe(current);
-		current = current->next;
-	}
+	current = reorganize_tokens(&(data->token_list));
 	return (current);
+}
+
+t_token	*manage_evar(t_token *token, t_venv **envp, t_data *data)
+{
+	int		i;
+	char	*final_line;
+	char	*content;
+	char	*env_key;
+	int		has_single_quote;
+
+	i = 0;
+	final_line = NULL;
+	content = token->content;
+	has_single_quote = FALSE;
+	if (content[i] == '\'')
+		has_single_quote = TRUE;
+	while (content[i])
+	{
+		if (content[i] == '$' && has_single_quote == FALSE && \
+			ft_isspace(content[i + 1]) == 0 && content[i + 1])
+		{
+			env_key = evarjoin(&i, content, &final_line, data);
+			if (env_key != NULL)
+				env_searched(env_key, &final_line, envp);
+		}
+		else
+			concat_word(&i, content, &final_line, has_single_quote);
+	}
+	return (fix_envtoken(token, &final_line, data));
 }

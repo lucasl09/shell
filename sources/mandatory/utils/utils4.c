@@ -1,109 +1,128 @@
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdio.h>
+#include <unistd.h>
 
-static void	add_ast_node(t_token *current, t_tree *current_tree_node)
+static int	validate_export_var(char *str)
 {
-	if (current->prev != NULL)
+	int	i;
+	int	after_equal;
+
+	i = 0;
+	after_equal = FALSE;
+	if (ft_isalpha(str[0]) == 0 && str[0] != '_')
+		return (FALSE);
+	while (str[i])
 	{
-		if (current->prev->prev == NULL || current->prev->prev->content == NULL)
-			initialize_treenode(current->prev, &current_tree_node, LEFT);
-		else
-			current_tree_node->left_token = current->prev;
-		if (current_tree_node->left_token)
-			verify_leftcmds(current_tree_node, current_tree_node);
-	}
-	if (current->next != NULL)
-	{
-		if (current->next->next == NULL || current->next->next->content == NULL)
-			initialize_treenode(current->next, &current_tree_node, RIGHT);
-		else
-			current_tree_node->right_token = current->next;
-		if (current_tree_node->right_token)
-			verify_rightcmds(current_tree_node, current_tree_node);
-	}
-}
-
-t_tree	*break_nodes(t_token *current, t_tree **tree_lists, int direction)
-{
-	t_tree	*current_tree_node;
-
-	current_tree_node = tree_new(ft_strdup(current->content), current->token);
-	if (direction == RIGHT)
-		tree_addright(tree_lists, current_tree_node);
-	else
-		tree_addleft(tree_lists, current_tree_node);
-	free(current->content);
-	current->content = NULL;
-	current->token = NONE;
-	add_ast_node(current, current_tree_node);
-	return (current_tree_node);
-}
-
-void	continue_division(t_tokens operator, t_tree **tree_lists,
-		t_tree *ast_current_node, int direction)
-{
-	t_tree	*node_ast;
-	t_token	*current;
-
-	node_ast = NULL;
-	if (direction == RIGHT)
-		current = verify_lastlst(ast_current_node->right_token);
-	else
-		current = ast_current_node->left_token;
-	while (current != NULL && current->content != NULL)
-	{
-		if (current->token == operator)
+		if ((ft_isalnum(str[i]) != 0 || str[i] == '_') && after_equal == FALSE)
+			i++;
+		else if (str[i] == '=')
 		{
-			node_ast = break_nodes(current, &ast_current_node, direction);
-			for_left_cnodes(operator, node_ast, tree_lists, TRUE);
-			for_right_cnodes(operator, node_ast, tree_lists, TRUE);
+			i++;
+			after_equal = TRUE;
 		}
-		else if (operator == 6 && current->token > 2)
-		{
-			node_ast = break_nodes(current, &ast_current_node, direction);
-			for_left_cnodes(operator, node_ast, tree_lists, TRUE);
-		}
+		else if (after_equal == TRUE)
+			i++;
 		else
-			current = current->prev;
+			return (FALSE);
 	}
+	return (TRUE);
 }
 
-void	for_left_cnodes(t_tokens operator, t_tree *ast_current_node,
-		t_tree **tree_lists, int status)
+static int	ft_export(char **arg, t_venv **envp, t_venv *env)
 {
-	if (status == FALSE)
+	int		i;
+	int		has_error;
+
+	i = 1;
+	has_error = 0;
+	if (!arg[1])
+		return (ft_envprints(env));
+	while (arg[i])
 	{
-		while (ast_current_node && ast_current_node->left != NULL)
-			ast_current_node = ast_current_node->left;
+		if (validate_export_var(arg[i]) == TRUE)
+			ft_exported_env(arg[i++], envp);
+		else
+		{
+			ft_putstr_fd("minishell: export: ", 2);
+			ft_putstr_fd(arg[i++], 2);
+			ft_putendl_fd(": not a valid identifier", 2);
+			has_error++;
+		}
 	}
-	if (ast_current_node->left != NULL || ast_current_node->left_token == NULL)
-		return ;
-	else if (ast_current_node->left_token)
-	{
-		if (ast_current_node->left_token->content == NULL)
-			return ;
-	}
-	continue_division(operator, tree_lists, ast_current_node, LEFT);
-	if (ast_current_node->right_token)
-		continue_division(operator, tree_lists, ast_current_node, RIGHT);
+	if (has_error != 0)
+		return (1);
+	return (0);
 }
 
-void	for_right_cnodes(t_tokens operator, t_tree *ast_current_node,
-		t_tree **tree_lists, int status)
+int	init_builtins(char **arg, t_data *data, t_venv **envp)
 {
-	if (status == FALSE)
+	int			status;
+
+	status = ft_changedir(arg, envp);
+	if (status != -1)
+		return (status);
+	if (ft_clear(arg[0]) || ft_echo(arg, data) || call_pwd(arg[0]))
+		return (0);
+	else if (ft_strncmp(arg[0], "env", 4) == 0)
 	{
-		while (ast_current_node && ast_current_node->right != NULL)
-			ast_current_node = ast_current_node->right;
+		if (arg[1] == NULL)
+			return (ft_env(envp, FALSE));
+		printf("env: ‘%s’: No such file or directory\n", arg[1]);
+		return (127);
 	}
-	if (ast_current_node->right != NULL
-		|| ast_current_node->right_token == NULL)
-		return ;
-	else if (ast_current_node->right_token)
+	else if (ft_strncmp(arg[0], "unset", 6) == 0)
 	{
-		if (ast_current_node->right_token->content == NULL)
-			return ;
+		if (arg[1])
+			return (ft_unset(envp, arg[1]));
+		else
+			return (0);
 	}
-	continue_division(operator, tree_lists, ast_current_node, RIGHT);
-	if (ast_current_node->left_token)
-		continue_division(operator, tree_lists, ast_current_node, LEFT);
+	else if (ft_strncmp(arg[0], "export", 7) == 0)
+		return (ft_export(arg, envp, data->envp));
+	return (-1);
+}
+
+static int	parse_pipe(const char *input, int sgq, int dbq)
+{
+	int	index;
+	int	valid;
+
+	index = 0;
+	valid = 0;
+	while (input[index] != '\0')
+	{
+		if (input[index] == '\'')
+			sgq++;
+		else if (input[index] == '"')
+			dbq++;
+		if (input[index] == '|' && !(sgq % 2) && !(dbq % 2))
+		{
+			if (valid)
+				return (0);
+			valid = 1;
+		}
+		else if (ft_isspace(input[index]))
+			valid = 0;
+		else if (ft_isalnum(input[index]))
+			valid = 0;
+		index++;
+	}
+	return (valid);
+}
+
+int	has_pipe_in(const char *input)
+{
+	int	dbq;
+	int	sgq;
+	int	valid;
+
+	dbq = 0;
+	sgq = 0;
+	valid = 0;
+	if (input[0] == '|')
+		return (0);
+	valid = parse_pipe(input, sgq, dbq);
+	if (valid)
+		return (0);
+	return (1);
 }

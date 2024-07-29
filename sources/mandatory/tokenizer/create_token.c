@@ -1,4 +1,5 @@
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdio.h>
 
 static t_token	*build_word_token(int *i, char *cmd_line)
 {
@@ -18,12 +19,12 @@ static t_token	*build_word_token(int *i, char *cmd_line)
 			else
 				break ;
 		}
-		else if (parse_ttokens(cmd_line, &size, has_quote) == -1)
+		else if (parse_created_tokens(cmd_line, &size, has_quote) == -1)
 			break ;
 		if (cmd_line[size] == '|' && ft_isspace(cmd_line[--size]) == 0)
 			break ;
 	}
-	token = newtoken(ft_strndup(&cmd_line[*i], size - *i), WORD);
+	token = token_lstnew(ft_strndup(&cmd_line[*i], size - *i), WORD);
 	*i = size;
 	return (token);
 }
@@ -42,7 +43,7 @@ static t_token	*build_expansion_token(int *i, char *cmd_line)
 		while (ft_isalpha(cmd_line[size]) != 0 || cmd_line[size] == '_')
 			size++;
 	}
-	token = newtoken(ft_strndup(&cmd_line[*i], size - *i), EXPANSION);
+	token = token_lstnew(ft_strndup(&cmd_line[*i], size - *i), EXPANSION);
 	*i = size - 1;
 	return (token);
 }
@@ -63,20 +64,20 @@ static t_token	*build_quote_token(int *i, char *cmd_line)
 	else
 		size++;
 	if (cmd_line[size] != '<' && cmd_line[size] != '>')
-		for_tquote(cmd_line, &size);
-	token = newtoken(ft_strndup(&cmd_line[*i], size - *i), WORD);
+		create_quote_token(cmd_line, &size);
+	token = token_lstnew(ft_strndup(&cmd_line[*i], size - *i), WORD);
 	*i = size - 1;
 	return (token);
 }
 
-static int	create_token_type(t_token **token, int *i, char *cmd)
+static int	build_token_type(t_token **token, int *i, char *cmd)
 {
 	if (cmd[*i] == '<' || cmd[*i] == '>')
-		*token = initialize_rdt(i, cmd);
+		*token = build_redirect_token(i, cmd);
 	else if (cmd[*i] == '\'' || cmd[*i] == '\"')
 		*token = build_quote_token(i, cmd);
 	else if (cmd[*i] == '|')
-		*token = newtoken(ft_strndup(&cmd[*i], 1), PIPE);
+		*token = token_lstnew(ft_strndup(&cmd[*i], 1), PIPE);
 	else if (cmd[*i] == '$')
 		*token = build_expansion_token(&(*i), cmd);
 	else if (ft_isspace(cmd[*i]) == 0)
@@ -86,10 +87,10 @@ static int	create_token_type(t_token **token, int *i, char *cmd)
 	if (*token == NULL)
 		return (ERROR);
 	else
-		return (OK);
+		return (SUCESS);
 }
 
-int	create_token(char *cmd, t_token **token_list)
+int	build_token(char *cmd, t_token **token_list)
 {
 	t_token	*token;
 	int		i;
@@ -101,12 +102,12 @@ int	create_token(char *cmd, t_token **token_list)
 		if (cmd[i] == '<' || cmd[i] == '>' || cmd[i] == '|' || cmd[i] == '$'
 			|| ft_isspace(cmd[i]) == 0 || cmd[i] == '\'' || cmd[i] == '\"')
 		{
-			create_token_type(&token, &i, cmd);
+			build_token_type(&token, &i, cmd);
 			if (token == NULL)
 				return (ERROR);
 		}
 		if (token != NULL)
-			put_lasttoken(token_list, token);
+			token_lstadd_back(token_list, token);
 		if (cmd[i])
 			i++;
 	}

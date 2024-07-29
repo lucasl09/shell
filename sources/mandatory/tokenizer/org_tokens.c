@@ -1,56 +1,116 @@
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-t_token	*add_tlist(t_data *data, t_venv **envp)
+static void	expand_status_env_var(char *env_key, char **final_line, \
+									t_data *data)
 {
-	t_token	*current;
-	int		has_operator;
+	char	*temp;
+	char	*status;
 
-	current = data->token_list;
-	has_operator = FALSE;
-	current = put_type_t(current, &has_operator, data, envp);
-	if (!data->token_list || data->token_list->next == NULL)
-		return (current);
-	if (has_operator == FALSE)
-	{
-		current = data->token_list;
-		while (current)
-		{
-			current = add_venv(current, envp, data);
-			if (current == NULL)
-				break ;
-			current->token = CMD_TOKEN;
-			current = current->next;
-		}
-	}
-	current = reorganize_tokens(&(data->token_list));
-	return (current);
+	status = ft_itoa(data->endsts);
+	temp = ft_strjoin(*final_line, status);
+	free (*final_line);
+	free (status);
+	free (env_key);
+	*final_line = temp;
+	return ;
 }
 
-t_token	*add_venv(t_token *token, t_venv **envp, t_data *data)
+void	env_searched(char *env_key, char **final_line, t_venv **envp)
 {
-	int		i;
-	char	*final_line;
-	char	*content;
-	char	*env_key;
-	int		has_single_quote;
+	t_venv	*env;
+	char		*temp;
 
-	i = 0;
-	final_line = NULL;
-	content = token->content;
-	has_single_quote = FALSE;
-	if (content[i] == '\'')
-		has_single_quote = TRUE;
-	while (content[i])
+	temp = NULL;
+	env = env_lstsearch(envp, env_key);
+	free (env_key);
+	if (env != NULL)
 	{
-		if (content[i] == '$' && has_single_quote == FALSE && \
-			ft_isspace(content[i + 1]) == 0 && content[i + 1])
+		temp = ft_strjoin(*final_line, env->value);
+		free (*final_line);
+		*final_line = temp;
+	}
+	else
+	{
+		if (*final_line)
+			free (*final_line);
+		*final_line = NULL;
+	}
+}
+
+char	*evarjoin(int *i, char *content, char **final_line, t_data *data)
+{
+	int			start;
+	char		*env_key;
+
+	start = *i;
+	(*i)++;
+	data->has_env = TRUE;
+	while (content[*i])
+	{
+		if (ft_isspace(content[*i]) == 0 && content[*i] != '$' && \
+			content[*i] != '\'' && content[*i] != '\"')
 		{
-			env_key = adjust_venv(&i, content, &final_line, data);
-			if (env_key != NULL)
-				env_entry(env_key, &final_line, envp);
+			if (content[++(*i) - 1] == '?')
+				break ;
 		}
 		else
-			for_words(&i, content, &final_line, has_single_quote);
+			break ;
 	}
-	return (fixed_etokens(token, &final_line, data));
+	env_key = ft_strndup(&content[start + 1], (*i) - start - 1);
+	if (env_key[0] == '?')
+	{
+		expand_status_env_var(env_key, final_line, data);
+		return (NULL);
+	}
+	return (env_key);
+}
+
+void	concat_word(int *i, char *content, char **final_line, int has_s_quote)
+{
+	char	*line;
+	char	*temp;
+	int		start;
+
+	start = *i;
+	while (content[*i])
+	{
+		if (content[*i] == '$' && has_s_quote == FALSE && \
+			content[(*i) + 1] && ft_isspace(content[(*i) + 1]) == 0 \
+			&& content[(*i) + 1] != '\'' && content[(*i) + 1] != '\"')
+			break ;
+		(*i)++;
+	}
+	line = ft_strndup(&(content[start]), (*i) - start);
+	temp = ft_strjoin(*final_line, line);
+	free (*final_line);
+	free (line);
+	*final_line = temp;
+}
+
+t_token	*fix_envtoken(t_token *token, char **final_line, t_data *data)
+{
+	t_token	*next;
+
+	free (token->content);
+	if (*final_line != NULL)
+	{
+		token->content = *final_line;
+		return (token);
+	}
+	else
+	{
+		next = token->next;
+		if (token->prev)
+			token->prev->next = token->next;
+		if (token->next)
+			token->next->prev = token->prev;
+		if (next)
+			data->token_list = next;
+		else
+			data->token_list = token->prev;
+		free (token);
+		return (next);
+	}
 }

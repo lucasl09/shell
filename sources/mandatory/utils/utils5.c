@@ -1,91 +1,80 @@
 #include "../../../includes/mandatory/mini_shell.h"
 
-t_tree	*tree_new(char *content, t_tokens token_type)
+static int	has_signal(char *str, char s, int status)
 {
-	t_tree	*node;
+	int		index;
 
-	node = (t_tree *)malloc(sizeof(t_tree));
-	if (node == NULL)
-		return (NULL);
-	node->content = content;
-	node->tree_type = initialize_checker(token_type);
-	node->left = NULL;
-	node->right = NULL;
-	node->left_token = NULL;
-	node->right_token = NULL;
-	return (node);
+	index = 0;
+	while (str[index])
+		if (str[index++] == s)
+			return (status + 1);
+	return (status);
 }
 
-void	tree_clear(t_tree **lst)
+static void	has_var(t_venv *check, char **split_var, int has_equal)
 {
-	t_tree	*current;
-	t_tree	*right;
-
-	if (*lst == NULL)
-		return ;
-	current = *lst;
-	while (current != NULL)
-	{
-		right = current->right;
-		if (current->left != NULL)
-			tree_clear(&(current->left));
-		if (current->content)
-			free(current->content);
-		free(current);
-		current = right;
-	}
-	*lst = NULL;
-}
-
-void	tree_addleft(t_tree **lst, t_tree *new)
-{
-	t_tree	*last;
-
-	last = NULL;
-	if (new == NULL)
-		return ;
-	if (*lst == NULL)
-	{
-		*lst = new;
-		return ;
-	}
-	last = *lst;
-	while (last->left != NULL)
-		last = last->left;
-	last->left = new;
-	last->left_token = NULL;
-}
-
-void	tree_addright(t_tree **lst, t_tree *new)
-{
-	t_tree	*last;
-
-	last = NULL;
-	if (new == NULL)
-		return ;
-	if (*lst == NULL)
-	{
-		*lst = new;
-		return ;
-	}
-	last = *lst;
-	while (last->right != NULL)
-		last = last->right;
-	last->right = new;
-	last->right_token = NULL;
-}
-
-void	initialize_treenode(t_token *new_node, t_tree **tree_lists, int direction)
-{
-	t_tree	*new;
-
-	new = tree_new(ft_strdup(new_node->content), new_node->token);
-	if (direction == LEFT)
-		tree_addleft(tree_lists, new);
+	if (check->value)
+		free(check->value);
+	if (!split_var[1] && has_equal == TRUE)
+		check->value = ft_strdup("\"\"");
+	else if (split_var[1] == NULL && has_equal == FALSE)
+		check->value = NULL;
 	else
-		tree_addright(tree_lists, new);
-	free (new_node->content);
-	new_node->content = NULL;
-	new_node->token = NONE;
-	return ;
+		check->value = ft_strdup(split_var[1]);
+	free_trash(split_var);
+	check = NULL;
+}
+
+static void	add_var(t_venv *temp, char **split_var, int has_equal)
+{
+	if (split_var[1] == NULL && has_equal == FALSE)
+		env_lstadd_back(&temp, env_lstnew(split_var[0], NULL));
+	else if (split_var[1] == NULL && has_equal == TRUE)
+		env_lstadd_back(&temp, env_lstnew(split_var[0], "\"\""));
+	else
+		env_lstadd_back(&temp, env_lstnew(split_var[0], split_var[1]));
+	free_trash(split_var);
+}
+
+static char	**split_var_env(char *input, int has_equal)
+{
+	char	**var;
+	int		index;
+
+	index = 0;
+	var = ft_calloc(sizeof(char *), 3);
+	if (!var)
+		return (NULL);
+	if (has_equal)
+	{
+		while (input[index++] != '=')
+			;
+		var[0] = ft_strndup(input, index - 1);
+		var[1] = ft_strdup(input + index);
+		return (var);
+	}
+	var[0] = ft_strndup(input, ft_strlen(input));
+	var[1] = NULL;
+	return (var);
+}
+
+void	ft_exported_env(char *var, t_venv **envp)
+{
+	t_venv	*temp;
+	t_venv	*check;
+	char		**split_var;
+	int			has_equal;
+
+	check = NULL;
+	split_var = NULL;
+	if (!var || !*envp)
+		return ;
+	has_equal = has_signal(var, '=', FALSE);
+	temp = *envp;
+	split_var = split_var_env(var, has_equal);
+	check = env_lstsearch(&temp, split_var[0]);
+	if (!check)
+		add_var(temp, split_var, has_equal);
+	else
+		has_var(check, split_var, has_equal);
 }

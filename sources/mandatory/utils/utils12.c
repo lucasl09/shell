@@ -1,64 +1,122 @@
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdio.h>
+#include <stdlib.h>
 
-static int	has_quotes(const char *input)
+static int	upgrade_args_cmds(t_token *current, int direction)
 {
-	char	quots;
-	int		index;
-
-	index = 0;
-	quots = '\0';
-	while (input[index] != '\0')
+	if (direction == RIGHT)
 	{
-		if (input[index] == '"' || input[index] == '\'')
+		while (current->next)
 		{
-			if (quots == 0)
-				quots = input[index];
-			else if (quots == input[index])
-				quots = 0;
+			if (current->next->token == WORD)
+				current->next->token = CMD_TOKEN;
+			else
+				break ;
+			current = current->next;
 		}
-		index++;
 	}
-	if (quots)
-		return (0);
-	return (1);
+	else
+	{
+		while (current->prev)
+		{
+			if (current->prev->token == WORD)
+				current->prev->token = CMD_TOKEN;
+			else
+				break ;
+			current = current->prev;
+		}
+	}
+	return (TRUE);
 }
 
-static int	check_redirect(char const *input)
+static int	upgrade_operator(t_token *current)
 {
-	int	double_q;
-	int	single_q;
+	char	*new_content;
 
-	double_q = 0;
-	single_q = 0;
-	while (*input != '\0')
+	if ((current->token >= 3 && current->token <= 5) && current->next)
 	{
-		if (*input == '\'')
-			single_q++;
-		else if (*input == '"')
-			double_q++;
-		if ((*input == '>' || *input == '<') && (single_q % 2 == 0)
-			&& (double_q % 2 == 0))
+		if (current->next->token == WORD)
 		{
-			if (*input != *(input + 1))
-			{
-				if (*(input + 1))
-					return (1);
-				else
-					return (0);
-			}
+			current->next->token = FTOKEN;
+			new_content = release_quotes_expand(current->next->content);
+			free(current->next->content);
+			current->next->content = new_content;
 		}
-		input++;
 	}
-	return (1);
+	else if (current->token == FTOKEN && current->next)
+	{
+		if (current->next->token == WORD)
+			upgrade_args_cmds(current, RIGHT);
+	}
+	if ((current->token >= 3 && current->token <= 5) && current->prev)
+	{
+		if (current->prev->token == WORD)
+			upgrade_args_cmds(current, LEFT);
+	}
+	return (TRUE);
 }
 
-int	verify_prompt(const char *input)
+static int	upgrade_pipe(t_token *current)
 {
-	if (!has_quotes(input))
-		return (0);
-	if (!check_pipe(input))
-		return (0);
-	if (!check_redirect(input))
-		return (0);
-	return (1);
+	if (current->token == PIPE && current->next)
+	{
+		if (current->next->token == WORD)
+			upgrade_args_cmds(current, RIGHT);
+	}
+	if (current->token == PIPE && current->prev)
+	{
+		if (current->prev->token == WORD)
+			upgrade_args_cmds(current, LEFT);
+	}
+	return (TRUE);
+}
+
+static int	upgrade_dless(t_token *current)
+{
+	if (current->token == DLESS && current->next)
+	{
+		if (current->next->token == WORD)
+			current->next->token = DTOKEN;
+	}
+	else if (current->token == DTOKEN && current->next)
+	{
+		if (current->next->token == WORD)
+			upgrade_args_cmds(current, RIGHT);
+	}
+	if (current->token == DLESS && current->prev)
+	{
+		if (current->prev->token == WORD)
+			upgrade_args_cmds(current, LEFT);
+	}
+	return (TRUE);
+}
+
+t_token	*manage_all_ttypes(t_token *current, int *has_operator,
+				t_data *data, t_venv **envp)
+{
+	if (current->next == NULL)
+	{
+		current->token = CMD_TOKEN;
+		current = manage_evar(current, envp, data);
+		return (reorganize_tokens(&(data->token_list)));
+	}
+	while (current->next)
+	{
+		if ((current->token >= 3 && current->token <= 5) && current->next)
+			*has_operator = upgrade_operator(current);
+		else if ((current->token == DLESS || current->token == DTOKEN)
+			&& current->next)
+			*has_operator = upgrade_dless(current);
+		else if (current->token == PIPE && current->next)
+			*has_operator = upgrade_pipe(current);
+		if (((current->token >= 3 && current->token <= 5)
+				|| current->token == FTOKEN) && current->prev)
+			*has_operator = upgrade_operator(current);
+		else if (current->token == DLESS && current->prev)
+			*has_operator = upgrade_dless(current);
+		else if (current->token == PIPE && current->prev)
+			*has_operator = upgrade_pipe(current);
+		current = current->next;
+	}
+	return (current);
 }

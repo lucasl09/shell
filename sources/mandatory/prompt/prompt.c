@@ -11,8 +11,11 @@
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdlib.h>
+#include <signal.h>
+#include <stdio.h>
 
-static t_data	*initialize_data(int status)
+static t_data	*force_init_data(int status)
 {
 	t_data	*data;
 
@@ -21,44 +24,49 @@ static t_data	*initialize_data(int status)
 	if (!data)
 		return (NULL);
 	data->token_list = NULL;
-	data->tree_lists = NULL;
+	data->tree_listed = NULL;
 	data->envp = NULL;
-	data->for_sts = status;
+	data->endsts = status;
 	data->has_env = FALSE;
 	return (data);
 }
 
-static int	build_data_storage(t_data *data, t_venv **envp, char *input)
+static int	force_bdata(t_data *data, t_venv **envp, char *input)
 {
-	if (create_token(input, &data->token_list) == ERROR)
+	if (build_token(input, &data->token_list) == ERROR)
 		return (0);
-	data->token_list = add_tlist(data, envp);
+	data->token_list = manage_tlists(data, envp);
 	if (data->token_list == NULL)
 	{
-		free_storage(&data);
+		free_data(&data);
 		return (0);
 	}
-	eotokens(&data->token_list, &data->tree_lists);
-	if (!data->tree_lists)
+	eotokens(&data->token_list, &data->tree_listed);
+	if (!data->tree_listed)
 		return (0);
-	clear_tokens(&data->token_list);
+	tokenlst_clear(&data->token_list);
 	data->envp = *envp;
 	return (1);
 }
 
-int	initialize_mini(t_venv **envp, char *input, int status)
+int	init_minihell(t_venv **envp, char *input, int status)
 {
 	t_data	*data;
 
-	data = initialize_data(status);
-	signal(SIGINT, putnewline);
-	if (!build_data_storage(data, envp, input))
+	data = force_init_data(status);
+	signal(SIGINT, sig_newline);
+	if (!force_bdata(data, envp, input))
 		return (0);
-	status = initialize_execs(data, envp);
-	signal(SIGINT, putnewline);
-	find_hd_delimiter(data->tree_lists);
+	status = ongoing_exec(data, envp);
+	signal(SIGINT, sig_newline);
+	release_heredoc(data->tree_listed);
 	if (data)
-		free_storage(&data);
+		free_data(&data);
 	return (status);
 }
 
+void	initialize(void)
+{
+	printf("\033[1;33mALL DONE\033[0m\n");
+	printf("\033[1;33mMINIHELL started!\033[0m\n");
+}

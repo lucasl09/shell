@@ -11,21 +11,26 @@
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
+#include <readline/readline.h>
+#include <unistd.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <stdio.h>
 
-int	inheredoc(int inheredoc)
+int	inside_heredoc(int inside_heredoc)
 {
 	static int	heredoc;
 
-	if (inheredoc != -1)
-		heredoc = inheredoc;
+	if (inside_heredoc != -1)
+		heredoc = inside_heredoc;
 	return (heredoc);
 }
 
-void	putnewline(int signum)
+void	sig_newline(int signum)
 {
 	(void)signum;
 	g_vsig = signum;
-	if (inheredoc(-1) == TRUE)
+	if (inside_heredoc(-1) == TRUE)
 	{
 		printf("\n");
 		close (STDIN_FILENO);
@@ -46,8 +51,8 @@ void	handle_signal(int signum)
 	g_vsig = signum;
 }
 
-void	for_signals(void)
+void	init_signals(void)
 {
-	signal(SIGINT, putnewline);
+	signal(SIGINT, sig_newline);
 	signal(SIGQUIT, SIG_IGN);
 }

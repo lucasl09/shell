@@ -1,93 +1,88 @@
-// /* ************************************************************************** */
-// /*                                                                            */
-// /*                                                        :::      ::::::::   */
-// /*   builtins.c                                         :+:      :+:    :+:   */
-// /*                                                    +:+ +:+         +:+     */
-// /*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
-// /*                                                +#+#+#+#+#+   +#+           */
-// /*   Created: 2024/06/16 13:29:34 by roglopes          #+#    #+#             */
-// /*   Updated: 2024/07/14 16:31:57 by roglopes         ###   ########.fr       */
-// /*                                                                            */
-// /* ************************************************************************** */
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   builtins.c                                         :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: roglopes <roglopes@student.42.fr>          +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2024/06/16 13:29:34 by roglopes          #+#    #+#             */
+/*   Updated: 2024/07/14 16:31:57 by roglopes         ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
 
-static int	validate_export_var(char *str)
+static void	insert_sorted(t_venv **sorted, t_venv *new_node)
 {
-	int	i;
-	int	after_equal;
+	t_venv	*current;
 
-	i = 0;
-	after_equal = FALSE;
-	if (ft_isalpha(str[0]) == 0 && str[0] != '_')
-		return (FALSE);
-	while (str[i])
+	if (*sorted == NULL || ft_strncmp((*sorted)->key, new_node->key, \
+		ft_strlen((*sorted)->key)) >= 0)
 	{
-		if ((ft_isalnum(str[i]) != 0 || str[i] == '_') && after_equal == FALSE)
-			i++;
-		else if (str[i] == '=')
-		{
-			i++;
-			after_equal = TRUE;
-		}
-		else if (after_equal == TRUE)
-			i++;
-		else
-			return (FALSE);
+		new_node->next = *sorted;
+		*sorted = new_node;
 	}
-	return (TRUE);
+	else
+	{
+		current = *sorted;
+		while (current->next && ft_strncmp(current->next->key, new_node->key, \
+			ft_strlen(current->next->key)) < 0)
+			current = current->next;
+		new_node->next = current->next;
+		current->next = new_node;
+	}
 }
 
-static int	ft_export(char **arg, t_venv **envp, t_venv *env)
+static void	sort_env(t_venv **envp)
 {
-	int		i;
-	int		has_error;
+	t_venv	*sorted;
+	t_venv	*current;
+	t_venv	*next;
 
-	i = 1;
-	has_error = 0;
-	if (!arg[1])
-		return (print_venv(env));
-	while (arg[i])
+	current = *envp;
+	sorted = NULL;
+	while (current)
 	{
-		if (validate_export_var(arg[i]) == TRUE)
-			ft_bexport(arg[i++], envp);
-		else
-		{
-			ft_putstr_fd("minishell: export: ", 2);
-			ft_putstr_fd(arg[i++], 2);
-			ft_putendl_fd(": not a valid identifier", 2);
-			has_error++;
-		}
+		next = current->next;
+		insert_sorted(&sorted, current);
+		current = next;
 	}
-	if (has_error != 0)
-		return (1);
+	*envp = sorted;
+}
+
+static t_venv	*copy_env(t_venv *origin)
+{
+	t_venv	*current;
+	char		*key;
+	char		*value;
+	t_venv	*envp;
+
+	current = origin;
+	envp = NULL;
+	while (current)
+	{
+		key = ft_strdup(current->key);
+		if (current->value)
+		{
+			value = ft_strdup(current->value);
+			env_lstadd_back(&envp, env_lstnew(key, value));
+			free (value);
+		}
+		else
+			env_lstadd_back(&envp, env_lstnew(key, NULL));
+		free (key);
+		current = current->next;
+	}
+	return (envp);
+}
+
+int	ft_envprints(t_venv *env)
+{
+	t_venv	*copy;
+
+	copy = copy_env(env);
+	sort_env(&copy);
+	ft_env(&copy, TRUE);
+	free_envp(&copy);
 	return (0);
-}
-
-int	initialize_builtins(char **arg, t_data *data, t_venv **envp)
-{
-	int			status;
-
-	status = ft_cd(arg, envp);
-	if (status != -1)
-		return (status);
-	if (ft_clear(arg[0]) || ft_echo(arg, data) || ft_pwd(arg[0]))
-		return (0);
-	else if (ft_strncmp(arg[0], "env", 4) == 0)
-	{
-		if (arg[1] == NULL)
-			return (ft_env(envp, FALSE));
-		printf("env: ‘%s’: No such file or directory\n", arg[1]);
-		return (127);
-	}
-	else if (ft_strncmp(arg[0], "unset", 6) == 0)
-	{
-		if (arg[1])
-			return (ft_unset(envp, arg[1]));
-		else
-			return (0);
-	}
-	else if (ft_strncmp(arg[0], "export", 7) == 0)
-		return (ft_export(arg, envp, data->envp));
-	return (-1);
 }

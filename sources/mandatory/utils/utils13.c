@@ -1,6 +1,7 @@
 #include "../../../includes/mandatory/mini_shell.h"
+#include <stdlib.h>
 
-t_token	*newtoken(char *content, t_tokens type)
+t_token	*token_lstnew(char *content, t_tokens type)
 {
 	t_token	*node;
 
@@ -14,7 +15,7 @@ t_token	*newtoken(char *content, t_tokens type)
 	return (node);
 }
 
-void	put_lasttoken(t_token **lst, t_token *new)
+void	token_lstadd_back(t_token **lst, t_token *new)
 {
 	t_token	*current;
 
@@ -38,7 +39,7 @@ void	put_lasttoken(t_token **lst, t_token *new)
 	}
 }
 
-t_token	*verify_lastlst(t_token *lst)
+t_token	*token_lstlast(t_token *lst)
 {
 	if (lst)
 	{
@@ -49,7 +50,7 @@ t_token	*verify_lastlst(t_token *lst)
 	return (NULL);
 }
 
-void	clear_tokens(t_token **lst)
+void	tokenlst_clear(t_token **lst)
 {
 	t_token	*current;
 	t_token	*next;

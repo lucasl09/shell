@@ -26,8 +26,6 @@ COMMAND_DIR			= $(SOURCES_DIR)mandatory/command/
 BUILTINS_DIR		= $(SOURCES_DIR)mandatory/builtins/
 UTILS_DIR			= $(SOURCES_DIR)mandatory/utils/
 FREE_DIR			= $(SOURCES_DIR)mandatory/free/
-ERROR_DIR			= $(SOURCES_DIR)mandatory/error/
-ENV_DIR				= $(SOURCES_DIR)mandatory/getenv/
 
 LIBFT				= ./libft/libft.a
 
@@ -36,9 +34,7 @@ CC					= cc
 
 VALGRIND_LOG		= valgrind.log
 
-MAIN_SOURCES		= $(MAIN_DIR)main.c
-
-ERROR_SOURCES		= $(ERROR_DIR)error1.c                
+MAIN_SOURCES		= $(MAIN_DIR)main.c             
 
 PROMPT_SOURCES		= $(PROMPT_DIR)prompt.c                \
 					$(PROMPT_DIR)signal.c
@@ -60,12 +56,14 @@ EXPANSION_SOURCES	= $(EXPANSION_DIR)variable_expansion.c \
 COMMAND_SOURCES		= $(COMMAND_DIR)execute_command.c      \
 					$(COMMAND_DIR)execute_command2.c       \
 					$(COMMAND_DIR)execute_command3.c       \
+					$(COMMAND_DIR)execute_command4.c       \
+					$(COMMAND_DIR)execute_command5.c       \
+					$(COMMAND_DIR)execute_command6.c       \
 
 BUILTINS_SOURCES	= $(BUILTINS_DIR)builtins.c            \
 					$(BUILTINS_DIR)builtins2.c             \
 					$(BUILTINS_DIR)builtins3.c             \
 					$(BUILTINS_DIR)builtins4.c             \
-					$(BUILTINS_DIR)builtins5.c             \
 
 UTILS_SOURCES		= $(UTILS_DIR)utils1.c                 \
 					$(UTILS_DIR)utils2.c                   \
@@ -81,7 +79,6 @@ UTILS_SOURCES		= $(UTILS_DIR)utils1.c                 \
 					$(UTILS_DIR)utils12.c                  \
 					$(UTILS_DIR)utils13.c                  \
 					$(UTILS_DIR)utils14.c                  \
-					$(UTILS_DIR)utils15.c                  \
 
 FREE_SOURCES		= $(FREE_DIR)free_type.c
 
@@ -89,8 +86,7 @@ SOURCES				= $(MAIN_SOURCES) $(PROMPT_SOURCES) \
 					$(FREE_SOURCES) $(INITIALIZE_SOURCES) \
 					$(TOKEN_SOURCES) $(UTILS_SOURCES) \
 					$(BUILTINS_SOURCES) $(COMMAND_SOURCES) \
-					$(ERROR_SOURCES_SOURCES) \
-					$(EXPANSION_SOURCES)
+					$(EXPANSION_SOURCES) \
 
 OBJS				= $(patsubst $(SOURCES_DIR)%.c,$(OBJECTS_DIR)%.o, $(SOURCES))
 
@@ -109,7 +105,7 @@ $(OBJECTS_DIR)%.o: $(SOURCES_DIR)%.c
 	@mkdir -p $(@D)
 	@$(eval COUNT=$(shell expr $(COUNT) + 1))
 	@$(CC) $(CFLAGS) -o $@ -c $< $(HEADERS)
-	@printf "$(GREEN)Compiling Mini Shell %d%%\r$(RESET)" $$(echo $$(($(COUNT) * 100 / $(words $(SOURCES_DIR)))))
+	@printf "$(GREEN)Compiling Mini Hell %d%%\r$(RESET)" $$(echo $$(($(COUNT) * 100 / $(words $(SOURCES_DIR)))))
 
 $(NAME): $(OBJS) 
 	@$(CC) $(CFLAGS) $(OBJS) $(HEADERS) $(LIBFT) -o $(NAME) -lreadline
@@ -136,7 +132,7 @@ fclean: clean
 
 norm:
 	@norminette -R CheckForbiddenSource
-	@echo "$(CYAN)NORMINETTE OK $(RESET)"
+	@echo "$(CYAN)NORMINETTE SUCESS $(RESET)"
 
 valgrind: all
 	@valgrind --leak-check=full \

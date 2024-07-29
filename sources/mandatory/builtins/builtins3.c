@@ -12,7 +12,7 @@ static int	echo_env(char *content, t_data *data)
 		status = ft_echo(split, data);
 	else
 		status = 0;
-	free_evg(split);
+	free_trash(split);
 	return (status);
 }
 

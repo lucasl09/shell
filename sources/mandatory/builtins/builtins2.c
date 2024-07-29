@@ -11,8 +11,10 @@
 /* ************************************************************************** */
 
 #include "../../../includes/mandatory/mini_shell.h"
+#include <unistd.h>
+#include <stdio.h>
 
-int	ft_pwd(char *input)
+int	call_pwd(char *input)
 {
 	char	*pwd;
 
@@ -65,7 +67,7 @@ static int	valid_cd(t_venv **envp, char *input)
 	return (0);
 }
 
-int	ft_cd(char **input, t_venv **envp)
+int	ft_changedir(char **input, t_venv **envp)
 {
 	if (ft_strncmp(input[0], "cd", 3))
 		return (-1);
@@ -73,7 +75,7 @@ int	ft_cd(char **input, t_venv **envp)
 		return (valid_cd(envp, NULL));
 	else if (input[2])
 	{
-		ft_putstr_fd("/\033[1;31mMINIHELL>$\033[0m: cd: too many arguments\n", STDERR_FILENO);
+		ft_putstr_fd("minishell: cd: too many arguments\n", STDERR_FILENO);
 		return (1);
 	}
 	return (valid_cd(envp, input[1]));
