@@ -8,16 +8,6 @@
 
 volatile int	g_vsig;
 
-void	prop(int restore)
-{
-	static struct termios	term;
-
-	if (!restore)
-		tcgetattr(STDIN_FILENO, &term);
-	else
-		tcsetattr(STDIN_FILENO, TCSANOW, &term);
-}
-
 static int	is_v_input(char *input)
 {
 	int	i;
@@ -59,6 +49,16 @@ static char	*define_user(t_venv **envp, char *tag)
 		user = ft_strjoin(tmp->value, "\033[1;31mMH> $\033[0m ");
 	tmp = NULL;
 	return (user);
+}
+
+void	prop(int attribute)
+{
+	static struct termios	term;
+
+	if (!attribute)
+		tcgetattr(STDIN_FILENO, &term);
+	else
+		tcsetattr(STDIN_FILENO, TCSANOW, &term);
 }
 
 static int	sucess_input(t_venv **envp, int status)
